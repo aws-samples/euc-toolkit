@@ -49,22 +49,27 @@ For information on getting the solution setup, along with the steps for optional
 The solution can be completely customized to meet business needs. The EUC toolkit is built on PowerShell using the Windows Presentation Framework ([WPF](https://learn.microsoft.com/en-us/visualstudio/designers/getting-started-with-wpf?view=vs-2022)) to display a graphical user interface (GUI). In addition, the solution has been modularized to to allow for changes and customizations. As is, the toolkit is licensed as MIT-0, meaning it is an 'as-is' example. Any changes made to the project are owned by the modifier. 
 
 **Customizing the PowerShell GUI**
+
 The GUI for the application is built using XML. To add additional buttons, labels, etc., open up the EUCToolkit-MainGUI.xml and make modifications there. Below is a sample button that is defined for changing the running mode of a WorkSpace. From there, the button can be referenced in your PowerShell script and have invocation actions configured. 
 
 `
 "Button Name="btnChangeRunningMode" Content="Change RunningMode" HorizontalAlignment="Left" Height="24" Margin="41,575,0,0" VerticalAlignment="Top" Width="124" RenderTransformOrigin="0.671,0.467" Grid.Column="1" Grid.ColumnSpan="2"
 `
 
-**Creating / Customizing Functions:**
+**Creating / Customizing Functions**
+
 The Powershell script is divided into 2 files, both can be customized to add additional functionality or used as a reference for other automation.
 
 **EUCToolkit-Main.ps1**
+
 Contains all of the code that interacts with the GUI. The functions in this script will call actions in the EUCToolkit-Helper.psm1 to perform calls against WorkSpaces and on AppStream 2.0.
 
 **EUCToolkit-Helper.psm1**
+
 Contains all of the functions that interact with WorkSpaces and AppStream 2.0.
 
 **Updating CloudWatch Images**
+
 Included in the EUC toolkit are several JSON files that are used to generate images from CloudWatch. These can be customized, see this [documentation](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-metric-streams-formats-json.html) for additional information.
 
 <a name="file-structure"></a>
