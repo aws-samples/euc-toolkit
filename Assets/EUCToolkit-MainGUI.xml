@@ -1,0 +1,289 @@
+<!--
+Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this
+software and associated documentation files (the "Software"), to deal in the Software
+without restriction, including without limitation the rights to use, copy, modify,
+merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+-->
+<Window 
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        Title="AWS EUC Toolkit" Height="768" Width="1200">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition/>
+        </Grid.ColumnDefinitions>
+        <TabControl Name="tabControl" HorizontalAlignment="Left" Height="737" VerticalAlignment="Top" Width="1200">
+            <TabItem Header="WorkSpaces - HelpDesk">
+                <Grid Background="#FFE5E5E5" Margin="-2,2,2,-2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="215*"/>
+                        <ColumnDefinition Width="44*"/>
+                        <ColumnDefinition Width="751*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox Name="FirstName" HorizontalAlignment="Left" Height="24" Margin="26,46,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="102"/>
+                    <TextBox Name="LastName" HorizontalAlignment="Left" Height="24" Margin="143,46,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="98" Grid.ColumnSpan="2"/>
+                    <TextBox Name="Email" HorizontalAlignment="Left" Height="24" Margin="1,46,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="161" Grid.Column="2"/>
+                    <Label Content="UserName:" HorizontalAlignment="Left" Height="24" Margin="20,429,0,0" VerticalAlignment="Top" Width="91"/>
+                    <Label Content="WorkSpaceId:" HorizontalAlignment="Left" Height="30" Margin="20,457,0,0" VerticalAlignment="Top" Width="91"/>
+                    <Label Content="Compute:" HorizontalAlignment="Left" Height="28" Margin="20,487,0,0" VerticalAlignment="Top" Width="91"/>
+                    <Label Content="RootVolume:" HorizontalAlignment="Left" Height="30" Margin="20,515,0,0" VerticalAlignment="Top" Width="91"/>
+                    <Label Content="UserVolume:" HorizontalAlignment="Left" Height="28" Margin="20,545,0,0" VerticalAlignment="Top" Width="91"/>
+                    <Label Content="RunningMode" HorizontalAlignment="Left" Height="26" Margin="20,573,0,0" VerticalAlignment="Top" Width="91"/>
+                    <Button Name="btnUpdateComputeType" Content="Update Compute" HorizontalAlignment="Left" Height="24" Margin="41,487,0,0" VerticalAlignment="Top" Width="124" Grid.Column="1" Grid.ColumnSpan="2" Visibility="Hidden"/>
+                    <Button Name="btnUpdateRootVolume" Content="Increase Root Volume" HorizontalAlignment="Left" Height="24" Margin="41,517,0,0" VerticalAlignment="Top" Width="124" Grid.Column="1" Grid.ColumnSpan="2"/>
+                    <Button Name="btnUpdateUserVolume" Content="Increase User Volume" HorizontalAlignment="Left" Height="24" Margin="41,545,0,0" VerticalAlignment="Top" Width="124" RenderTransformOrigin="0.627,0.554" Grid.Column="1" Grid.ColumnSpan="2"/>
+                    <Button Name="btnChangeRunningMode" Content="Change RunningMode" HorizontalAlignment="Left" Height="24" Margin="41,575,0,0" VerticalAlignment="Top" Width="124" RenderTransformOrigin="0.671,0.467" Grid.Column="1" Grid.ColumnSpan="2"/>
+                    <Label Content="IP Address:" HorizontalAlignment="Left" Height="24" Margin="143.451,429,0,0" VerticalAlignment="Top" Width="91" Grid.Column="2"/>
+                    <Label Content="Region:" HorizontalAlignment="Left" Height="30" Margin="143.451,457,0,0" VerticalAlignment="Top" Width="91" Grid.Column="2"/>
+                    <Label Content="Computer Name" HorizontalAlignment="Left" Height="28" Margin="143.451,487,0,0" VerticalAlignment="Top" Width="112" Grid.Column="2"/>
+                    <Button Name="btnTerminateWS" Content="Terminate" HorizontalAlignment="Left" Height="24" Margin="20,657,0,0" VerticalAlignment="Top" Width="112" Background="Red"/>
+                    <Button Name="btnRebuildWS" Content="Rebuild" HorizontalAlignment="Left" Height="24" Margin="169,657,0,0" VerticalAlignment="Top" Width="112" Background="Red" Grid.ColumnSpan="3"/>
+                    <Button Name="btnGatherLogs" Content="Gather Logs" HorizontalAlignment="Left" Height="24" Margin="50,657,0,0" VerticalAlignment="Top" Width="112" RenderTransformOrigin="1.453,0.246" Grid.Column="2"/>
+                    <Label Content="First Name:" HorizontalAlignment="Left" Height="25" Margin="26,21,0,0" VerticalAlignment="Top" Width="91"/>
+                    <Label Content="Last Name:" HorizontalAlignment="Left" Height="25" Margin="143,21,0,0" VerticalAlignment="Top" Width="91" Grid.ColumnSpan="2"/>
+                    <Label Content="Email:" HorizontalAlignment="Left" Height="25" Margin="1.451,21,0,0" VerticalAlignment="Top" Width="91" Grid.Column="2"/>
+                    <Label Content="RegCode" HorizontalAlignment="Left" Height="30" Margin="143.451,515,0,0" VerticalAlignment="Top" Width="112" Grid.Column="2"/>
+                    <Label Name="UserNameValue" Content="" HorizontalAlignment="Left" Height="28" Margin="116,429,0,0" VerticalAlignment="Top" Width="135" Grid.ColumnSpan="2"/>
+                    <Label Name="WorkSpaceIdValue" Content="" HorizontalAlignment="Left" Height="30" Margin="116,457,0,0" VerticalAlignment="Top" Width="135" Grid.ColumnSpan="2"/>
+                    <Label Name="RootValue" Content="" HorizontalAlignment="Left" Height="30" Margin="116,515,0,0" VerticalAlignment="Top" Width="135" Grid.ColumnSpan="2"/>
+                    <Label Name="UserValue" Content="" HorizontalAlignment="Left" Height="28" Margin="116,545,0,0" VerticalAlignment="Top" Width="135" Grid.ColumnSpan="2"/>
+                    <Label Name="RunningModeValue" Content="" HorizontalAlignment="Left" Height="30" Margin="116,569,0,0" VerticalAlignment="Top" Width="135" Grid.ColumnSpan="2"/>
+                    <Label Name="IPValue" Content="" HorizontalAlignment="Left" Height="28" Margin="254.451,429,0,0" VerticalAlignment="Top" Width="135" Grid.Column="2"/>
+                    <Label Name="RegionValue" Content="" HorizontalAlignment="Left" Height="30" Margin="254.451,457,0,0" VerticalAlignment="Top" Width="135" Grid.Column="2"/>
+                    <Label Name="ComputerNameValue" Content="" HorizontalAlignment="Left" Height="28" Margin="254.451,487,0,0" VerticalAlignment="Top" Width="135" Grid.Column="2"/>
+                    <Button Name="btnBackupUserVolume" Content="Backup UserVolume" HorizontalAlignment="Left" Height="24" Margin="209.451,657,0,0" VerticalAlignment="Top" Width="112" RenderTransformOrigin="1.453,0.246" Grid.Column="2"/>
+                    <Label Name="RegCodeValue" Content="" HorizontalAlignment="Left" Height="30" Margin="254.451,515,0,0" VerticalAlignment="Top" Width="135" Grid.Column="2"/>
+                    <Button Name="btnGetUserExperience" Content="Get User Experience Information" HorizontalAlignment="Left" Height="24" Margin="209,615,0,0" VerticalAlignment="Top" Width="228" Grid.Column="2"/>
+                    <Button Name="btnRDP" Content="RDP to WorkSpace" HorizontalAlignment="Left" Height="24" Margin="376.451,487,0,0" VerticalAlignment="Top" Width="112" Grid.Column="2"/>
+                    <ListView Name="SearchResults" HorizontalAlignment="Left" Height="320" Margin="24,104,0,0" VerticalAlignment="Top" Width="955" Grid.ColumnSpan="3">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="WorkSpaceId" DisplayMemberBinding="{Binding WorkSpaceId}" Width="200"/>
+                                <GridViewColumn Header="UserName" DisplayMemberBinding ="{Binding UserName}"/>
+                                <GridViewColumn Header="Region" DisplayMemberBinding ="{Binding Region}"/>
+                                <GridViewColumn Header="First Name" DisplayMemberBinding ="{Binding FirstName}"/>
+                                <GridViewColumn Header="Last Name" DisplayMemberBinding ="{Binding LastName}"/>
+                                <GridViewColumn Header="Computer Name" DisplayMemberBinding ="{Binding ComputerName}"/>
+                                <GridViewColumn Header="Email" DisplayMemberBinding ="{Binding Email}"/>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                    <Label Content="Computer Name:" HorizontalAlignment="Left" Height="25" Margin="376,21,0,0" VerticalAlignment="Top" Width="116" Grid.Column="2"/>
+                    <TextBox Name="txtComputerName" HorizontalAlignment="Left" Height="24" Margin="376,46,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="195" Grid.Column="2"/>
+                    <Label Content="DB Updated:" HorizontalAlignment="Left" Height="25" VerticalAlignment="Top" Width="116"/>
+                    <Button Name="btnRemoteAssist" Content="Remote Assist" HorizontalAlignment="Left" Height="24" Margin="41,430,0,0" VerticalAlignment="Top" Width="124" Grid.Column="1" Grid.ColumnSpan="2"/>
+                    <Label Name="lblLastDBUpdate" Content="5/20/22 7:00" HorizontalAlignment="Left" Height="25" Margin="79,0,0,0" VerticalAlignment="Top" Width="155" Grid.ColumnSpan="2"/>
+                    <ComboBox Name="cmboComputeValue" HorizontalAlignment="Left" Height="23" Margin="111,487,0,0" VerticalAlignment="Top" Width="135" RenderTransformOrigin="0.396,0.099" Grid.ColumnSpan="2"/>
+                    <Label Name="lblLastSnapshot" Content="Snapshot:" HorizontalAlignment="Left" Height="30" Margin="142.451,539,0,0" VerticalAlignment="Top" Width="112" Grid.Column="2"/>
+                    <Button Name="btnRestoreWS" Content="Restore" HorizontalAlignment="Left" Height="24" Margin="376.451,537,0,0" VerticalAlignment="Top" Width="112" Grid.Column="2"/>
+                    <Button Name="btnUpdateData" Content="Refresh" HorizontalAlignment="Left" Height="24" Margin="634,8,0,0" VerticalAlignment="Top" Width="107" Grid.Column="2"/>
+                    <Label Name="lblSnapShotValue" Content="" HorizontalAlignment="Left" Height="30" Margin="254.451,537,0,0" VerticalAlignment="Top" Width="135" Grid.Column="2"/>
+                    <Button Name="btnRebootWS" Content="Reboot" HorizontalAlignment="Left" Height="24" Margin="50,615,0,0" VerticalAlignment="Top" Width="112" RenderTransformOrigin="1.453,0.246" Grid.Column="2"/>
+                    <Button Name="btnPowerDownWS" Content="Power Down" HorizontalAlignment="Left" Height="24" Margin="169,615,0,0" VerticalAlignment="Top" Width="112" RenderTransformOrigin="1.453,0.246" Grid.ColumnSpan="3"/>
+                    <Button Name="btnPowerUpWS" Content="Power Up" HorizontalAlignment="Left" Height="24" Margin="20,615,0,0" VerticalAlignment="Top" Width="112" RenderTransformOrigin="1.453,0.246"/>
+                    <TextBox Name="txtUserName" HorizontalAlignment="Left" Height="24" Margin="181,46,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="177" Grid.Column="2"/>
+                    <Label Name="lblUserName" Content="UserName" HorizontalAlignment="Left" Height="25" Margin="181,21,0,0" VerticalAlignment="Top" Width="91" Grid.Column="2"/>
+                    <Button Name="btnCopyWSId" Content="Copy WorkSpaceId" HorizontalAlignment="Left" Height="24" Margin="41,458,0,0" VerticalAlignment="Top" Width="124" Grid.Column="1" Grid.ColumnSpan="2"/>
+                    <Button Name="btnCopyWSIP" Content="Copy IP Address" HorizontalAlignment="Left" Height="24" Margin="376,433,0,0" VerticalAlignment="Top" Width="112" Grid.Column="2"/>
+                    <Button Name="btnCopyWSComputerName" Content="Copy ComputerName" HorizontalAlignment="Left" Height="24" Margin="498,487,0,0" VerticalAlignment="Top" Width="130" Grid.Column="2"/>
+                    <Label Name="lblComputeValue" Content="" HorizontalAlignment="Left" Height="28" Margin="79,487,0,0" VerticalAlignment="Top" Width="135"/>
+                    <Label Name="lblState" Content="State" HorizontalAlignment="Left" Height="30" Margin="142,567,0,0" VerticalAlignment="Top" Width="112" Grid.Column="2"/>
+                    <Label Name="lblStateValue" Content="" HorizontalAlignment="Left" Height="30" Margin="254,566,0,0" VerticalAlignment="Top" Width="135" Grid.Column="2"/>
+
+                </Grid>
+            </TabItem>
+            <TabItem Header="WorkSpaces - Bulk Actions / Reporting">
+                <Grid Background="#FFE5E5E5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="94*"/>
+                        <ColumnDefinition Width="333*"/>
+                        <ColumnDefinition Width="314*"/>
+                        <ColumnDefinition Width="269*"/>
+                    </Grid.ColumnDefinitions>
+                    <Label Name="Status" Content="Status" HorizontalAlignment="Center" Height="5" Margin="221,10,206,0" VerticalAlignment="Top" Width="156" HorizontalContentAlignment="Center" Grid.ColumnSpan="2" Grid.Column="2"/>
+                    <ComboBox Name="selectWKSDirectory" HorizontalAlignment="Left" Height="24" Margin="26,69,0,0" VerticalAlignment="Top" Width="247" Grid.Column="2" />
+                    <Label Name="SelectDirectory" Content="Select Directory" HorizontalAlignment="Left" Height="25" Margin="298.975,0,0,659" VerticalAlignment="Bottom" Width="367" HorizontalContentAlignment="Center" FontWeight="Bold" Grid.ColumnSpan="3" Grid.Column="1" />
+                    <Label Name="TotalWorkSpaces" Content="Total WorkSpaces:" HorizontalAlignment="Left" Height="26" Margin="21,69,0,0" VerticalAlignment="Top" Width="156" HorizontalContentAlignment="Center" Grid.Column="3"/>
+                    <Label Name="WorkSpacesAvailable" Content="WorkSpaces Available:" HorizontalAlignment="Left" Height="25" Margin="21,100,0,0" VerticalAlignment="Top" Width="156" HorizontalContentAlignment="Center" Grid.Column="3"/>
+                    <Label Name="WorkSpacesStopped" Content="WorkSpaces Stopped:" HorizontalAlignment="Left" Height="25" Margin="21,130,0,0" VerticalAlignment="Top" Width="156" HorizontalContentAlignment="Center" Grid.Column="3"/>
+                    <Button Name="btnPowerOn" Content="Power On Targeted WS" HorizontalAlignment="Left" Height="30" Margin="63,237,0,0" VerticalAlignment="Top" Width="162" Grid.ColumnSpan="2"/>
+                    <Label Name="SelectDirectory_Copy" Content="Select a Region" HorizontalAlignment="Left" Height="25" Margin="47,0,0,659" VerticalAlignment="Bottom" Width="366" HorizontalContentAlignment="Center" FontWeight="Bold" Grid.ColumnSpan="2"/>
+                    <ComboBox Name="selectWKSRegion" HorizontalAlignment="Left" Height="24" Margin="7.975,69,0,0" VerticalAlignment="Top" Width="256" Grid.Column="1"/>
+                    <Label Name="TotalWorkSpacesCount" Content="X" HorizontalAlignment="Left" Height="25" Margin="182,70,-9,0" VerticalAlignment="Top" Width="96" HorizontalContentAlignment="Center" Grid.Column="3"/>
+                    <Label Name="TotalAvailable_Count" Content="X" HorizontalAlignment="Left" Height="25" Margin="182,100,-9,0" VerticalAlignment="Top" Width="96" HorizontalContentAlignment="Center" Grid.Column="3"/>
+                    <Label Name="TotalStopped_Count" Content="X" HorizontalAlignment="Left" Height="25" Margin="182,130,-9,0" VerticalAlignment="Top" Width="96" HorizontalContentAlignment="Center" RenderTransformOrigin="0.502,1.015" Grid.Column="3"/>
+                    <Button Name="btnPowerDown" Content="Power Down Targeted WS" HorizontalAlignment="Left" Height="30" Margin="62,284,0,0" VerticalAlignment="Top" Width="162" Grid.ColumnSpan="2"/>
+                    <Button Name="btnMigrate" Content="Migrate WorkSpaces" HorizontalAlignment="Left" Height="30" Margin="151.975,237,0,0" VerticalAlignment="Top" Width="162" Grid.Column="1"/>
+                    <Button Name="btnTerminate" Content="Terminate WorkSpaces" HorizontalAlignment="Left" Height="30" Margin="151.975,284,0,0" VerticalAlignment="Top" Width="162" Grid.Column="1"/>
+                    <Button Name="btnEnableMain" Content="Enable Admin Maint Mode" HorizontalAlignment="Center" Height="30" Margin="3,284,149,0" VerticalAlignment="Top" Width="162" Grid.Column="2"/>
+                    <Button Name="btnDisableMain" Content="Disable Admin Maint Mode" HorizontalAlignment="Left" Height="30" Margin="202,284,0,0" VerticalAlignment="Top" Width="162" Grid.ColumnSpan="2" Grid.Column="2"/>
+
+                    <ListView Name="lstImpactedWorkSpaces" HorizontalAlignment="Left" Height="275" Margin="63,353,0,0" VerticalAlignment="Top" Width="908" Grid.ColumnSpan="4">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="WorkSpaceId" DisplayMemberBinding="{Binding WorkSpaceId}"/>
+                                <GridViewColumn Header="UserName" DisplayMemberBinding ="{Binding UserName}"/>
+                                <GridViewColumn Header="Region" DisplayMemberBinding ="{Binding Region}"/>
+                                <GridViewColumn Header="First Name" DisplayMemberBinding ="{Binding FirstName}"/>
+                                <GridViewColumn Header="Last Name" DisplayMemberBinding ="{Binding LastName}"/>
+                                <GridViewColumn Header="Computer Name" DisplayMemberBinding ="{Binding ComputerName}"/>
+                                <GridViewColumn Header="Email" DisplayMemberBinding ="{Binding Email}"/>
+                                <GridViewColumn Header="State" DisplayMemberBinding ="{Binding State}"/>
+                            </GridView>
+                        </ListView.View>
+
+                    </ListView>
+
+                    <Label Name="SelectDirectory_Copy1" Content="Targeted WorkSpaces" HorizontalAlignment="Left" Height="25" Margin="-60,0,0,361" VerticalAlignment="Bottom" Width="367" HorizontalContentAlignment="Center" FontWeight="Bold" Grid.ColumnSpan="2"/>
+                    <Label Name="SelectDirectory_Copy2" Content="Select an additional filters (Optional)" HorizontalAlignment="Left" Height="25" Margin="44,0,0,598" VerticalAlignment="Bottom" Width="366" HorizontalContentAlignment="Center" Grid.ColumnSpan="2"/>
+                    <ComboBox Name="selectRunningModeFilterCombo" HorizontalAlignment="Left" Height="24" Margin="318.975,160,0,0" VerticalAlignment="Top" Width="327" Grid.ColumnSpan="2" Grid.Column="1" />
+                    <Label Name="selectRunningModeFilter" Content="Running Mode" HorizontalAlignment="Left" Height="32" Margin="40.975,156,0,0" VerticalAlignment="Top" Width="184" HorizontalContentAlignment="Center" FontWeight="Bold" Grid.Column="1"/>
+                    <Label Name="BundleLabel" Content="Bundle" HorizontalAlignment="Left" Height="25" Margin="44,0,0,573" VerticalAlignment="Bottom" Width="366" HorizontalContentAlignment="Center" FontWeight="Bold" Grid.ColumnSpan="2"/>
+                    <ComboBox Name="selectWKSBundle" HorizontalAlignment="Left" Height="24" Margin="318.975,128,0,0" VerticalAlignment="Top" Width="327" Grid.ColumnSpan="2" Grid.Column="1" />
+                    <Label Name="txtDDBUpdated" Content="DB Updated:" HorizontalAlignment="Left" Height="26" VerticalAlignment="Top" Width="91" HorizontalContentAlignment="Center"/>
+                    <Label Name="lblLastDBUpdateBulk" Content="XX/XX/22 7:00" HorizontalAlignment="Left" Height="26" Margin="47,0,0,0" VerticalAlignment="Top" Width="204" HorizontalContentAlignment="Center" Grid.ColumnSpan="2"/>
+                    <ComboBox Name="migrateBundleCombo" HorizontalAlignment="Left" Height="24" Margin="88,240,0,0" VerticalAlignment="Top" Width="276" Grid.ColumnSpan="2" Grid.Column="2" />
+                    <Label Name="migrateBundleTxt" Content="Target Bundle:" HorizontalAlignment="Left" Height="32" Margin="318.975,236,0,0" VerticalAlignment="Top" Width="102" HorizontalContentAlignment="Center" FontWeight="Normal" RenderTransformOrigin="0.446,0.751" Grid.ColumnSpan="2" Grid.Column="1"/>
+                    <Button Name="btnUpdateDB" Content="Refresh" HorizontalAlignment="Left" Height="24" Margin="169,2,0,0" VerticalAlignment="Top" Width="100" Grid.Column="3" RenderTransformOrigin="2.56,0.289"/>
+                    <Button Name="btnExportBulk" Content="Export to CSV" HorizontalAlignment="Left" Height="27" Margin="78,287,0,0" VerticalAlignment="Top" Width="152" Grid.Column="3"/>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="AppStream - HelpDesk">
+                <Grid Background="#FFE5E5E5">
+                    <Label Name="Status_Copy" Content="Status" HorizontalAlignment="Center" Height="5" Margin="647.5,10,206.5,0" VerticalAlignment="Top" Width="156" HorizontalContentAlignment="Center"/>
+                    <ComboBox Name="cmboAppStreamHelpDesk" HorizontalAlignment="Left" Height="24" Margin="145,106,0,0" VerticalAlignment="Top" Width="149" />
+                    <Label Name="lblAppStreamHelpDeskSearch" Content="Search Criteria" HorizontalAlignment="Center" Height="25" Margin="63.7,0,579.3,612.2" VerticalAlignment="Bottom" Width="367" HorizontalContentAlignment="Center" />
+                    <Button Name="btnAppStreamHelpDeskRemoteAssist" Content="Remote Support" HorizontalAlignment="Left" Height="30" Margin="59,479,0,0" VerticalAlignment="Top" Width="162"/>
+                    <Label Name="lblAppStreamHelpDeskSelectRegion" Content="Select a Region" HorizontalAlignment="Center" Height="25" Margin="64,0,580,676" VerticalAlignment="Bottom" Width="366" HorizontalContentAlignment="Left"/>
+                    <ComboBox Name="cmboAppStreamHelpDeskRegion" HorizontalAlignment="Left" Height="24" Margin="64,33,0,0" VerticalAlignment="Top" Width="230"/>
+                    <Button Name="btnAppStreamHelpDeskSessionDisconnect" Content="Disconnect Session" HorizontalAlignment="Left" Height="30" Margin="248,479,0,0" VerticalAlignment="Top" Width="162"/>
+                    <Button Name="btnAppStreamHelpDeskSessionExport" Content="Export Data" HorizontalAlignment="Left" Height="30" Margin="440,479,0,0" VerticalAlignment="Top" Width="162"/>
+
+                    <ListView Name="listAppStreamSessions" HorizontalAlignment="Left" Height="148" Margin="59,299,0,0" VerticalAlignment="Top" Width="900">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="UserId" DisplayMemberBinding="{Binding UserId}"/>
+                                <GridViewColumn Header="Stack" DisplayMemberBinding="{Binding Stack}"/>
+                                <GridViewColumn Header="State" DisplayMemberBinding ="{Binding State}"/>
+                                <GridViewColumn Header="ConnectedState" DisplayMemberBinding ="{Binding ConnectedState}"/>
+                                <GridViewColumn Header="StartTime" DisplayMemberBinding ="{Binding StartTime}"/>
+                                <GridViewColumn Header="PrivateIP" DisplayMemberBinding ="{Binding PrivateIP}"/>
+                                <GridViewColumn Header="Id" DisplayMemberBinding ="{Binding Id}"/>
+
+                            </GridView>
+                        </ListView.View>
+
+                    </ListView>
+
+                    <Label Name="lblAppStreamHelpDeskSessions" Content="AppStream Sessions" HorizontalAlignment="Center" Height="25" Margin="59,0,584,410" VerticalAlignment="Bottom" Width="367" HorizontalContentAlignment="Left"/>
+                    <Label Name="lblAppStreamHelpDeskSelectUserId" Content="UserId" HorizontalAlignment="Left" Height="25" Margin="59,0,0,541.2" VerticalAlignment="Bottom" Width="64" HorizontalContentAlignment="Left"/>
+                    <ComboBox Name="cmboAppStreamHelpDeskUserState" HorizontalAlignment="Left" Height="24" Margin="145,185,0,0" VerticalAlignment="Top" Width="149" />
+                    <TextBox Name="txtAppStreamHelpDeskUserId" HorizontalAlignment="Left" Height="22" Margin="145,146,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="149"/>
+                    <Label Name="lblAppStreamHelpDeskSelectState" Content="State" HorizontalAlignment="Left" Height="25" Margin="59,0,0,500.2" VerticalAlignment="Bottom" Width="64" HorizontalContentAlignment="Left"/>
+                    <Label Name="lblAppStreamHelpDeskSelectIP" Content="IP Address" HorizontalAlignment="Left" Height="25" Margin="344,0,0,500.2" VerticalAlignment="Bottom" Width="82" HorizontalContentAlignment="Left"/>
+                    <Label Name="cmboAppStreamHelpDeskSelectStack" Content="Select a Stack" HorizontalAlignment="Left" Height="25" Margin="59,0,0,579.2" VerticalAlignment="Bottom" Width="81" HorizontalContentAlignment="Left"/>
+                    <ComboBox Name="cmboAppStreamHelpDeskUserStateConnectedState" HorizontalAlignment="Left" Height="24" Margin="470,107,0,0" VerticalAlignment="Top" Width="149" />
+                    <Label Name="lblAppStreamHelpDeskSelectConnection" Content="Connected State" HorizontalAlignment="Left" Height="25" Margin="344,0,0,578.2" VerticalAlignment="Bottom" Width="112" HorizontalContentAlignment="Left"/>
+                    <Label Name="lblAppStreamHelpDeskSelectSession" Content="Session Id" HorizontalAlignment="Left" Height="25" Margin="344,0,0,541.2" VerticalAlignment="Bottom" Width="112" HorizontalContentAlignment="Left"/>
+                    <TextBox Name="txtAppStreamHelpDeskUserSessionId" HorizontalAlignment="Left" Height="22" Margin="470,146,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="149"/>
+                    <TextBox Name="txtAppStreamHelpDeskUserIP" HorizontalAlignment="Left" Height="22" Margin="470,187,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="149"/>
+
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Administration">
+                <Grid Background="#FFE5E5E5">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="105*"/>
+                        <ColumnDefinition Width="697*"/>
+                        <ColumnDefinition Width="208*"/>
+                    </Grid.ColumnDefinitions>
+                    <Label Name="lblAccessPermissions" Content="Access Permissions" HorizontalAlignment="Left" Height="34" Margin="10,0,0,665" VerticalAlignment="Bottom" Width="140" HorizontalContentAlignment="Center" FontWeight="Bold" FontSize="14" Grid.ColumnSpan="2"/>
+                    <Label Name="lblLogsTools" Content="Log / Tools Configuration:" HorizontalAlignment="Left" Height="34" Margin="10,0,0,533" VerticalAlignment="Bottom" Width="186" HorizontalContentAlignment="Center" FontWeight="Bold" FontSize="14" Grid.ColumnSpan="2"/>
+                    <Label Name="lblWSLogs" Content="Path for WorkSpace Side Logs" HorizontalAlignment="Left" Height="27" Margin="20,176,0,0" VerticalAlignment="Top" Width="176" Grid.ColumnSpan="2"/>
+                    <TextBox Name="txtServerSideLogs" HorizontalAlignment="Left" Height="22" Margin="77,181,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="291" Grid.Column="1"/>
+                    <Label Name="lblBackups" Content="Back up destination" HorizontalAlignment="Left" Height="27" Margin="20,208,0,0" VerticalAlignment="Top" Width="156" Grid.ColumnSpan="2"/>
+                    <TextBox Name="txtBackUpDest" HorizontalAlignment="Left" Height="22" Margin="76,213,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="291" Grid.Column="1"/>
+                    <Label Name="lblPSEXEC" Content="Path to PSEXEC" HorizontalAlignment="Left" Height="27" Margin="20,240,0,0" VerticalAlignment="Top" Width="156" Grid.ColumnSpan="2"/>
+                    <TextBox Name="txtPSExecPath" HorizontalAlignment="Left" Height="22" Margin="76,245,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="291" Grid.Column="1"/>
+                    <Label Name="SelectDirectory_Copy8" Content="Refresh WorkSpace Data" HorizontalAlignment="Left" Height="34" Margin="10,0,0,378" VerticalAlignment="Bottom" Width="186" HorizontalContentAlignment="Center" FontWeight="Bold" FontSize="14" Grid.ColumnSpan="2"/>
+                    <Button Name="btnQueryWSUpdateDB" Content="Refresh WorkSpaces Data" HorizontalAlignment="Left" Height="39" Margin="20,336,0,0" VerticalAlignment="Top" Width="452" Grid.ColumnSpan="2"/>
+                    <Label Name="lblReporting" Content="Path for Reporting" HorizontalAlignment="Left" Height="27" Margin="400,176,0,0" VerticalAlignment="Top" Width="156" Grid.Column="1"/>
+                    <TextBox Name="txtReporting" HorizontalAlignment="Left" Height="22" Margin="587,181,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="291" Grid.Column="1" Grid.ColumnSpan="2"/>
+                    <Label Name="lblCWLogs" Content="CloudWatch Access Logs (ARN)" HorizontalAlignment="Left" Height="27" Margin="400,208,0,0" VerticalAlignment="Top" Width="181" Grid.Column="1"/>
+                    <Label Name="lblCTLogs" Content="CloudTrail Logs (ARN)" HorizontalAlignment="Left" Height="27" Margin="400,240,0,0" VerticalAlignment="Top" Width="156" Grid.Column="1"/>
+                    <TextBox Name="txtCloudWatchAccessLogs" HorizontalAlignment="Left" Height="22" Margin="587,213,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="291" Grid.Column="1" Grid.ColumnSpan="2"/>
+                    <TextBox Name="txtCloudTrailLogs" HorizontalAlignment="Left" Height="22" Margin="586,245,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="291" Grid.Column="1" Grid.ColumnSpan="2"/>
+                    <Label Name="lblCWAgentInstall" Content="Cloud Watch Agent Configured?" HorizontalAlignment="Left" Height="27" Margin="400,279,0,0" VerticalAlignment="Top" Width="181" Grid.Column="1"/>
+                    <ComboBox Name="cmboCWAgentInstall" Grid.Column="1" HorizontalAlignment="Left" Height="21" Margin="586,280,0,0" VerticalAlignment="Top" Width="292" Grid.ColumnSpan="2"/>
+                    <TextBox Name="txtDisk2VHDPath" HorizontalAlignment="Left" Height="22" Margin="76,279,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="291" Grid.Column="1"/>
+                    <Label Name="lblDisk2VHDPath" Content="Path to Disk2VHD" HorizontalAlignment="Left" Height="27" Margin="20,274,0,0" VerticalAlignment="Top" Width="156" Grid.ColumnSpan="2"/>
+                    <Label Name="lblActivePermissions" Grid.ColumnSpan="2" Content="Active Permissions" FontWeight="Bold" HorizontalAlignment="Left" Height="30" Margin="22,48,0,0" VerticalAlignment="Top" Width="154"/>
+                    <Label Name="lblPermissions" Grid.ColumnSpan="2" Content="" HorizontalAlignment="Left" Height="30" Margin="22,78,0,0" VerticalAlignment="Top" Width="154"/>
+                </Grid>
+            </TabItem>
+            <TabItem Header="Logging">
+                <Grid Background="#FFE5E5E5">
+                    <ListView Name="lstLogging" HorizontalAlignment="Left" Height="614" Margin="7,72,0,0" VerticalAlignment="Top" Width="993" Grid.ColumnSpan="3">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="Time" DisplayMemberBinding="{Binding loggingTime}"/>
+                                <GridViewColumn Header="Message" DisplayMemberBinding ="{Binding loggingMessage}"/>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                </Grid>
+            </TabItem>
+            <TabItem Name="tabCloudWatch" Header="CloudWatch Information" >
+                <Grid Background="#FFE5E5E5">
+                    <Image Name="CloudWatchHistoricalLatency" HorizontalAlignment="Left" Height="213" Margin="10,70,0,0" VerticalAlignment="Top" Width="381" Source="C:\temp\WorkSpaceHistoricalLatency-Start.png"/>
+                    <Image Name="CloudWatchWorkSpaceLatency" HorizontalAlignment="Left" Height="213" Margin="397,70,0,0" VerticalAlignment="Top" Width="381" Source="C:\temp\WorkSpaceLatency-Start.png"/>
+                    <Image Name="CloudWatchWorkSpaceCPU" HorizontalAlignment="Left" Height="213" Margin="10,250,0,0" VerticalAlignment="Top" Width="381" Source="C:\\temp\WorkSpacesSessionLaunch-Start.png"/>
+                    <Image Name="CloudWatchWorkSpaceLaunch" HorizontalAlignment="Left" Height="213" Margin="786,70,-152,0" VerticalAlignment="Top" Width="381" Source="C:\temp\WorkSpacesCPU-Start.png"/>
+                    <Image Name="CloudWatchWorkSpaceMemory" HorizontalAlignment="Left" Height="213" Margin="397,250,0,0" VerticalAlignment="Top" Width="381" Source="C:\temp\WorkSpacesMemory-Start.png"/>
+                    <Image Name="CloudWatchWorkSpaceDisk" HorizontalAlignment="Left" Height="213" Margin="786,250,-157,0" VerticalAlignment="Top" Width="381" Source="C:\temp\WorkSpacesDisk-Start.png"/>
+                    <ListView Name="CloudWatchLoginInfo" HorizontalAlignment="Left" Height="231" Margin="24,468,0,0" VerticalAlignment="Top" Width="524">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="Time" DisplayMemberBinding ="{Binding Time}"/>
+                                <GridViewColumn Header="IP" DisplayMemberBinding ="{Binding IP}"/>
+                                <GridViewColumn Header="Platform" DisplayMemberBinding ="{Binding Platform}"/>
+                                <GridViewColumn Header="Client Version" DisplayMemberBinding ="{Binding ClientVersion}"/>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                    <Label Content="Login History" HorizontalAlignment="Left" Height="31" Margin="218,437,0,0" VerticalAlignment="Top" Width="142"/>
+                    <Label Content="WorkSpace Modifcations" HorizontalAlignment="Left" Height="31" Margin="808,432,0,0" VerticalAlignment="Top" Width="142"/>
+                    <ListView Name="CloudWatchWorkSpaceModifications" HorizontalAlignment="Left" Height="231" Margin="643,468,0,0" VerticalAlignment="Top" Width="524">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="Time" DisplayMemberBinding="{Binding Time}"/>
+                                <GridViewColumn Header="Region" DisplayMemberBinding ="{Binding Region}"/>
+                                <GridViewColumn Header="WorkSpaceId" DisplayMemberBinding ="{Binding WorkSpaceId}"/>
+                                <GridViewColumn Header="ComputeType" DisplayMemberBinding ="{Binding ComputeType}"/>
+                                <GridViewColumn Header="RunningMode" DisplayMemberBinding ="{Binding RunningMode}"/>
+                                <GridViewColumn Header="UserVolume" DisplayMemberBinding ="{Binding UserVolume}"/>
+                                <GridViewColumn Header="RootVolume" DisplayMemberBinding ="{Binding RootVolume}"/>
+                            </GridView>
+                        </ListView.View>
+
+                    </ListView>
+
+                </Grid>
+            </TabItem>
+        </TabControl>
+    </Grid>
+</Window>

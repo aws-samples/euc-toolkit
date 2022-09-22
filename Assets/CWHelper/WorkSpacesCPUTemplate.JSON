@@ -1,0 +1,14 @@
+{
+    "view": "timeSeries",
+    "stacked": false,
+    "metrics": [
+        [ "CWAgent", "Processor % Processor Time", "instance", "0", "host", "WSAMZN-V5GUOTVF", "objectname", "Processor" ],
+        [ "...", "1", ".", ".", ".", "." ]
+    ],
+    "period": 300,
+    "title": "CPU last Month",
+    "width": 500,
+    "height": 200,
+    "start": "-PT1008H",
+    "end": "P0D"
+}

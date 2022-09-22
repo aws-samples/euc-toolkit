@@ -1,0 +1,13 @@
+{
+    "view": "timeSeries",
+    "stacked": false,
+    "metrics": [
+        [ "AWS/WorkSpaces", "SessionLaunchTime", "WorkspaceId", "ws-04dsqzg18" ]
+    ],
+    "period": 300,
+    "title": "Session Launch time past month",
+    "width": 500,
+    "height": 200,
+    "start": "-PT1008H",
+    "end": "P0D"
+}

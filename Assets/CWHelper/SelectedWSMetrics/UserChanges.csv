@@ -1,0 +1,4 @@
+"Time","Region","WorkSpaceId","ComputeType","RunningMode","UserVolume","RootVolume"
+"2022-08-17T02:38:07Z","us-east-1","ws-04dsqzg18",,"ALWAYS_ON",,
+"2022-08-17T02:37:43Z","us-east-1","ws-04dsqzg18",,"AUTO_STOP",,
+"2022-08-11T14:28:49Z","us-east-1","ws-04dsqzg18","STANDARD",,,
