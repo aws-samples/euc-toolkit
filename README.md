@@ -8,7 +8,7 @@
 
 <a name="solution-overview"></a>
 # Solution Overview
-The EUC Toolkit was created to provide additional features for admins managing [Amazon WorkSpaces](https://docs.aws.amazon.com/workspaces/latest/adminguide/amazon-workspaces.html) and [Amazon AppStream 2.0](https://docs.aws.amazon.com/appstream2/latest/developerguide/what-is-appstream.html) environments. The current build offers the listed functionality below. For additional information, please see our [launch announcement](https://aws.amazon.com/blogs/desktop-and-application-streaming/).
+The EUC Toolkit was created to provide additional features for admins managing [Amazon WorkSpaces](https://docs.aws.amazon.com/workspaces/latest/adminguide/amazon-workspaces.html) and [Amazon AppStream 2.0](https://docs.aws.amazon.com/appstream2/latest/developerguide/what-is-appstream.html) environments. The current build offers the listed functionality below. For additional information, please see our [launch announcement](https://aws.amazon.com/blogs/desktop-and-application-streaming/euc-toolkit/).
 
 ### Amazon WorkSpaces
 - Search by any attribute
@@ -41,7 +41,7 @@ The EUC Toolkit was created to provide additional features for admins managing [
 
 <a name="getting-started"></a>
 # Getting Started
-For information on getting the solution setup, along with the steps for optional features, see our [launch announcement](https://aws.amazon.com/blogs/desktop-and-application-streaming/).
+For information on getting the solution setup, along with the steps for optional features, see our [launch announcement](https://aws.amazon.com/blogs/desktop-and-application-streaming/euc-toolkit/).
 
 
 <a name="aws-solutions-constructs"></a><a name="customizing-the-solution"></a>
