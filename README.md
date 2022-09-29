@@ -46,7 +46,7 @@ For information on getting the solution setup, along with the steps for optional
 
 <a name="aws-solutions-constructs"></a><a name="customizing-the-solution"></a>
 # Customizing the Solution
-The solution can be completely customized to meet business needs. The EUC toolkit is built on PowerShell using the Windows Presentation Framework ([WPF](https://learn.microsoft.com/en-us/visualstudio/designers/getting-started-with-wpf?view=vs-2022)) to display a graphical user interface (GUI). In addition, the solution has been modularized to to allow for changes and customizations. As is, the toolkit is licensed as MIT-0, meaning it is an 'as-is' example. Any changes made to the project are owned by the modifier. 
+The solution can be completely customized to meet business needs. The EUC toolkit is built on PowerShell using the Windows Presentation Framework ([WPF](https://learn.microsoft.com/en-us/visualstudio/designers/getting-started-with-wpf?view=vs-2022)) to display a graphical user interface (GUI) on Windows machines. In addition, the solution has been modularized to to allow for changes and customizations. As is, the toolkit is licensed as MIT-0, meaning it is an 'as-is' example. Any changes made to the project are owned by the modifier. 
 
 **Customizing the PowerShell GUI**
 
