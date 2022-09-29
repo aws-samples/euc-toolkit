@@ -663,19 +663,18 @@ $SearchResults.add_SelectionChanged({
             $date = (get-date -Format "MM/dd/yyyy HH:mm") | Out-String
             $lblLastDBUpdate.Content = $date
         }
-
-        if($ComputerNameValue.Content.substring(0,1) -ne "A"){
+        if(($ComputerNameValue.Content.substring(0,1) -eq "A")-or($ComputerNameValue.Content.substring(0,1) -eq "U")){
+            $btnRemoteAssist.Visibility="Hidden"
+            $btnRDP.Visibility="Hidden"
+            $btnGatherLogs.Visibility="Hidden"
+            $btnBackupUserVolume.Visibility="Hidden"
+        }
+        else{
         #Windows Machine
             $btnRemoteAssist.Visibility="Visible"
             $btnRDP.Visibility="Visible"
             $btnGatherLogs.Visibility="Visible"
             $btnBackupUserVolume.Visibility="Visible"
-        }
-        else{
-            $btnRemoteAssist.Visibility="Hidden"
-            $btnRDP.Visibility="Hidden"
-            $btnGatherLogs.Visibility="Hidden"
-            $btnBackupUserVolume.Visibility="Hidden"
         }
     }
 })
