@@ -953,7 +953,7 @@ function Get-AppStreamSessions(){
                     $AS2Session | Add-Member -NotePropertyName "ConnectedState" -NotePropertyValue $session.ConnectionState
                     $AS2Session | Add-Member -NotePropertyName "StartTime" -NotePropertyValue $session.StartTime.ToString()
                     $AS2Session | Add-Member -NotePropertyName "PrivateIP" -NotePropertyValue $session.NetworkAccessConfiguration.EniPrivateIpAddress
-                    $AS2Session | Add-Member -NotePropertyName "SessionId" -NotePropertyValue $session.Id
+                    $AS2Session | Add-Member -NotePropertyName "Id" -NotePropertyValue $session.Id
         
                     $global:AppStreamDB  += $AS2Session
                 }
