@@ -81,19 +81,22 @@ function Search-WorkSpaces(){
     $SearchResults.Items.Clear()
     $filtered = $global:WorkSpacesDB
     if($FirstName.Text -ne ""){
-        $filtered = $filtered | Where-Object { ($_.FirstName -like ($FirstName.Text + "*")) } | Select-Object WorkSpaceId,Region,UserName,FirstName,LastName,ComputerName,Email 
+        $filtered = $filtered | Where-Object { ($_.FirstName -like ($FirstName.Text + "*")) } | Select-Object WorkSpaceId,Region,UserName,FirstName,LastName,ComputerName,Email,Protocol
     }
     if($LastName.Text -ne ""){
-        $filtered = $filtered | Where-Object { ($_.LastName -like ($LastName.Text + "*")) } | Select-Object WorkSpaceId,Region,UserName,FirstName,LastName,ComputerName,Email 
+        $filtered = $filtered | Where-Object { ($_.LastName -like ($LastName.Text + "*")) } | Select-Object WorkSpaceId,Region,UserName,FirstName,LastName,ComputerName,Email,Protocol
     }
     if($Email.Text -ne ""){
-        $filtered = $filtered | Where-Object { ($_.Email -like ("*"+$Email.Text + "*")) } | Select-Object WorkSpaceId,Region,UserName,FirstName,LastName,ComputerName,Email 
+        $filtered = $filtered | Where-Object { ($_.Email -like ("*"+$Email.Text + "*")) } | Select-Object WorkSpaceId,Region,UserName,FirstName,LastName,ComputerName,Email,Protocol 
     }
     if($txtComputerName.Text -ne ""){
-        $filtered = $filtered | Where-Object { ($_.ComputerName -like ("*" + $txtComputerName.Text + "*")) } | Select-Object WorkSpaceId,Region,UserName,FirstName,LastName,ComputerName,Email 
+        $filtered = $filtered | Where-Object { ($_.ComputerName -like ("*" + $txtComputerName.Text + "*")) } | Select-Object WorkSpaceId,Region,UserName,FirstName,LastName,ComputerName,Email,Protocol
     }
     if($txtUserName.Text -ne ""){
-        $filtered = $filtered | Where-Object { ($_.UserName -like ("*" + $txtUserName.Text + "*")) } | Select-Object WorkSpaceId,Region,UserName,FirstName,LastName,ComputerName,Email 
+        $filtered = $filtered | Where-Object { ($_.UserName -like ("*" + $txtUserName.Text + "*")) } | Select-Object WorkSpaceId,Region,UserName,FirstName,LastName,ComputerName,Email,Protocol
+    }
+    if($cmboProtocol.SelectedItem -ne "All"){
+        $filtered = $filtered | Where-Object { ($_.Protocol -like ($cmboProtocol.SelectedItem)) } | Select-Object WorkSpaceId,Region,UserName,FirstName,LastName,ComputerName,Email,Protocol
     }
 
     foreach($workspace in $filtered){
@@ -125,16 +128,20 @@ function Get-ImpactedWS(){
     }
     $allImpactedWS = $global:WorkSpacesDB | Where-Object { ($_.Region -eq $selectWKSRegion.SelectedItem)}
     if($bulkdirectoryId -like "All Directories"){
-        $allImpactedWS = $allImpactedWS | Select-Object directoryId, WorkSpaceId,UserName,Region,FirstName,LastName,ComputerName,Email,RunningMode,State
+        $allImpactedWS = $allImpactedWS | Select-Object directoryId, WorkSpaceId,UserName,Region,FirstName,LastName,ComputerName,Email,RunningMode,State,Protocol
     }else{
-        $allImpactedWS = $allImpactedWS | Where-Object { ($_.directoryId -eq $bulkdirectoryId) }| Select-Object directoryId, WorkSpaceId,UserName,Region,FirstName,LastName,ComputerName,Email,RunningMode,State
+        $allImpactedWS = $allImpactedWS | Where-Object { ($_.directoryId -eq $bulkdirectoryId) }| Select-Object directoryId, WorkSpaceId,UserName,Region,FirstName,LastName,ComputerName,Email,RunningMode,State,Protocol
     }
     if($selectRunningModeFilterCombo.SelectedItem -ne "Select Running Mode"){
-        $allImpactedWS = $allImpactedWS | Where-Object { ($_.RunningMode -like ($selectRunningModeFilterCombo.SelectedItem))} | Select-Object directoryId, WorkSpaceId,UserName,Region,FirstName,LastName,ComputerName,Email,RunningMode,State
+        $allImpactedWS = $allImpactedWS | Where-Object { ($_.RunningMode -like ($selectRunningModeFilterCombo.SelectedItem))} | Select-Object directoryId, WorkSpaceId,UserName,Region,FirstName,LastName,ComputerName,Email,RunningMode,State,Protocol
     }
     if($selectWKSBundle.SelectedItem -ne "Select Bundle"){
         $bundleSTR = ($selectWKSBundle.SelectedItem.split(" "))[0]
-        $allImpactedWS = $allImpactedWS | Where-Object { ($_.BundleId -like ($bundleSTR))} | Select-Object directoryId, WorkSpaceId,UserName,Region,FirstName,LastName,ComputerName,Email,RunningMode,State
+        $allImpactedWS = $allImpactedWS | Where-Object { ($_.BundleId -like ($bundleSTR))} | Select-Object directoryId, WorkSpaceId,UserName,Region,FirstName,LastName,ComputerName,Email,RunningMode,State,Protocol
+    }
+    if($cmboBulkProtocol.SelectedItem -ne "All"){
+        $protocolSTR = ($cmboBulkProtocol.SelectedItem.split(" "))[0]
+        $allImpactedWS = $allImpactedWS | Where-Object { ($_.Protocol -like ($protocolSTR))} | Select-Object directoryId, WorkSpaceId,UserName,Region,FirstName,LastName,ComputerName,Email,RunningMode,State,Protocol
     }
     foreach ($impactedWS in $allImpactedWS){
         if($NULL -ne $impactedWS.WorkSpaceId -and $lstImpactedWorkSpaces.Items.WorkSpaceId -notcontains $impactedWS.WorkSpaceId){
@@ -160,12 +167,17 @@ function Update-Counter(){
     $total = $global:WorkSpacesDB.WorkSpaceId.Count
     $available = ($global:WorkSpacesDB | Where-Object { $_.State -eq "AVAILABLE"}).Count
     $stopped = ($global:WorkSpacesDB | Where-Object { $_.State -eq "STOPPED"}).Count
+    $PCoIP = ($global:WorkSpacesDB | Where-Object { $_.Protocol -eq "PCOIP"}).Count
+    $WSP = ($global:WorkSpacesDB | Where-Object { $_.Protocol -eq "WSP"}).Count
+
     if($available -eq 0 -or $NULL -eq $available){
         $available = 0
     }
     $TotalWorkSpacesCount.content = $total
     $TotalAvailable_Count.content = $available
     $TotalStopped_Count.content = $stopped
+    $lblBulkPCOIPCounter.content = $PCoIP
+    $lblBulkWSPCounter.content = $WSP
 }
 
 ###############################################
@@ -192,6 +204,10 @@ $txtUserName.Add_TextChanged({
 
 $btnUpdateData.Add_Click({
     Update-WorkSpaceObject
+    Search-WorkSpaces
+})
+
+$cmboProtocol.add_SelectionChanged({
     Search-WorkSpaces
 })
 
@@ -498,6 +514,28 @@ $btnRDP.Add_Click({
     }
 })
 
+#Button to Modify Protocol (PCoIP to WSP)
+$btnModifyProtocol.Add_Click({
+    $WorkSpaceId = $WorkSpaceIdValue.Content
+    $ProtocolModifyReq = New-Object -TypeName PSobject
+    $ProtocolModifyReq | Add-Member -NotePropertyName "WorkSpaceId" -NotePropertyValue $WorkSpaceId
+    $ProtocolModifyReq | Add-Member -NotePropertyName "Region" -NotePropertyValue $RegionValue.Content
+    $ProtocolModifyReq | Add-Member -NotePropertyName "Protocol" -NotePropertyValue $lblProtocolValue.Content
+    $Output = Set-WKSProtocol -ProtocolModifyReq $ProtocolModifyReq
+    if($Output.ErrorCode){
+        $ErrCode = $Output.ErrorCode
+        $ErrMsg = $Output.ErrorMessage
+        Write-Logger -message "Protocol modification failed $WorkSpaceId. Details below:"
+        Write-Logger -message "Error Code: $ErrCode"
+        Write-Logger -message "Error Message: $ErrMsg"
+        Show-MessageError -message "Error modifying protocol, see log tab for details" -title "Error Modifying Protocol"
+    }else{
+        Show-MessageSuccess -message "Protocol modification on $WorkSpaceId executed successfully" -title "Successfully Modified Protocol"
+        Write-Logger -message "Protocol modification on $WorkSpaceId executed successfully"
+    }
+
+})
+
 $btnGetUserExperience.Add_Click({
     $workingDirectory=($PSScriptRoot +"\\Assets\\CWHelper\\") 
     $global:cloudWatchRun++
@@ -650,6 +688,7 @@ $SearchResults.add_SelectionChanged({
         $ComputerNameValue.Content = $WorkSpaceInfo.ComputerName
         $RegCodeValue.Content = $WorkSpaceInfo.RegCode
         $lblStateValue.Content = $WorkSpaceInfo.State
+        $lblProtocolValue.Content = $WorkSpaceInfo.Protocol
 
         try{
             $snapDate = Get-Date -Date ((Get-WKSWorkspaceSnapshot -WorkspaceId $WorkSpaceIdValue.Content -Region $RegionValue.Content).RebuildSnapshots.SnapshotTime | Out-String) -Format "MM/dd/yyyy HH:mm"  
@@ -708,6 +747,10 @@ $selectWKSRegion.add_SelectionChanged({
 # Bulk Buttons 
 $selectWKSDirectory.add_SelectionChanged({
     Get-ImpactedWS
+})
+
+$cmboBulkProtocol.add_SelectionChanged({
+    Search-WorkSpaces
 })
 
 $selectWKSBundle.add_SelectionChanged({
@@ -870,7 +913,7 @@ $btnDisableMain.Add_Click({
     }else{
         $ImpactedList = $lstImpactedWorkSpaces.SelectedItems 
     }
-    Optimize-APIRequest -requestInfo $ImpactedList -APICall "Disable-Main"
+    $Output = Optimize-APIRequest -requestInfo $ImpactedList -APICall "Disable-Main"
     if($Output.ErrorCode){
         $ErrCode = $Output.ErrorCode.ToString()
         $ErrMsg = $Output.ErrorMessage.ToString()
@@ -904,6 +947,31 @@ $btnExportBulk.Add_Click({
         }
     }else{
         Show-MessageError -message "Export failed due to export path not being set on Admin tab." -title "Export Failed"
+    }
+})
+
+#Button to Modify Protocol
+$btnBulkModifyProtocol.Add_Click({
+    if($lstImpactedWorkSpaces.SelectedItems.Count -eq 0){
+        $ImpactedList = $lstImpactedWorkSpaces.Items 
+    }else{
+        $ImpactedList = $lstImpactedWorkSpaces.SelectedItems 
+    }
+    $BulkProtocolModifyReq = @()
+    foreach($WS in $ImpactedList){
+        $BulkProtocolModifyReq += $WS
+    }
+    $Output = Set-WKSProtocol -ProtocolModifyReq $BulkProtocolModifyReq
+    if($Output.ErrorCode){
+        $ErrCode = $Output.ErrorCode
+        $ErrMsg = $Output.ErrorMessage
+        Write-Logger -message "Protocol modification failed $WorkSpaceId. Details below:"
+        Write-Logger -message "Error Code: $ErrCode"
+        Write-Logger -message "Error Message: $ErrMsg"
+        Show-MessageError -message "Error modifying protocol, see log tab for details" -title "Error Modifying Protocol"
+    }else{
+        Show-MessageSuccess -message "Protocol modification on $WorkSpaceId executed successfully" -title "Successfully Modified Protocol"
+        Write-Logger -message "Protocol modification on $WorkSpaceId executed successfully"
     }
 })
 
@@ -1086,6 +1154,16 @@ $btnAppStreamHelpDeskSessionExport.Add_Click({
 $btnQueryWSUpdateDB.Add_Click({
     Update-WorkSpaceObject
 })
+
+# Populate protocol dropown options
+$cmboProtocol.items.Add("All")
+$cmboProtocol.items.Add("WSP")
+$cmboProtocol.items.Add("PCoIP")
+$cmboProtocol.SelectedIndex=0
+$cmboBulkProtocol.items.Add("All")
+$cmboBulkProtocol.items.Add("WSP")
+$cmboBulkProtocol.items.Add("PCoIP")
+$cmboBulkProtocol.SelectedIndex=0
 
 # Initialization
 Update-WorkSpaceObject

@@ -64,6 +64,9 @@ function Get-LocalWorkSpacesDB(){
             $entry | Add-Member -NotePropertyName "RootVolume" -NotePropertyValue $Wks.WorkspaceProperties.RootVolumeSizeGib 
             $entry | Add-Member -NotePropertyName "UserVolume" -NotePropertyValue $Wks.WorkspaceProperties.UserVolumeSizeGib
             $entry | Add-Member -NotePropertyName "RunningMode" -NotePropertyValue $Wks.WorkspaceProperties.RunningMode
+            #Update for Protocol
+            if($Wks.WorkspaceProperties.Protocols -like "WSP"){$wsProto = 'WSP'}else{$wsProto = 'PCoIP'}
+            $entry | Add-Member -NotePropertyName "Protocol" -NotePropertyValue $wsProto
             $entry | Add-Member -NotePropertyName "IPAddress" -NotePropertyValue $Wks.IPAddress
             $entry | Add-Member -NotePropertyName "RegCode" -NotePropertyValue ($DeployedRegion | Where-Object {$_.directoryId -eq $Wks.directoryId}).RegistrationCode
             $entry | Add-Member -NotePropertyName "directoryId" -NotePropertyValue $Wks.directoryId
@@ -202,6 +205,37 @@ function Update-RootVolume{
     return $logging
 }  
 
+function Set-WKSProtocol{
+    param(
+        $ProtocolModifyReq
+    )
+    $logging = @()
+
+    foreach($req in $ProtocolModifyReq){
+        $WorkSpaceId = $req.WorkSpaceId 
+        $Region = $req.Region
+        if($req.Protocol -eq 'PCOIP'){
+            $TargetProtocol = 'WSP'
+        }
+        elseif($req.Protocol -eq 'WSP'){
+            $TargetProtocol = 'PCOIP'
+        }
+        $callBlock = "Edit-WKSWorkspaceProperty -WorkspaceId $WorkSpaceId -Region $Region -WorkspaceProperties_Protocols $TargetProtocol"
+        $scriptblock = [Scriptblock]::Create($callBlock)
+        try{
+            $logging += Invoke-Command -scriptblock $scriptblock
+        }Catch{
+            $msg = $_
+            $tmplogging = New-Object -TypeName PSobject
+            $tmplogging | Add-Member -NotePropertyName "ErrorCode" -NotePropertyValue "Error Terminating WorkSpaces"
+            $tmplogging | Add-Member -NotePropertyName "ErrorMessage" -NotePropertyValue $msg
+            $logging += $tmplogging
+        }
+    }
+
+    return $logging 
+} 
+
 function Update-UserVolume{
     # This function increases the available capacity on the WorkSpaces' User volume. For more information see the links below:
     # https://docs.aws.amazon.com/workspaces/latest/adminguide/modify-workspaces.html#change_volume_sizes
@@ -240,7 +274,7 @@ function Update-UserVolume{
         $callBlock = "Edit-WKSWorkspaceProperty -WorkspaceId $WorkSpaceId -Region $Region -WorkspaceProperties_UserVolumeSizeGib $requestedSize"
         $scriptblock = [Scriptblock]::Create($callBlock)
         try{
-            $logging += Invoke-Command -scriptblock $scriptblock
+            $logging = Invoke-Command -scriptblock $scriptblock
         }Catch{
             $msg = $_
             $logging = New-Object -TypeName PSobject
