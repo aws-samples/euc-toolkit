@@ -372,7 +372,7 @@ function Optimize-APIRequest{
             }Catch{
                 $msg = $_
                 $logging = New-Object -TypeName PSobject
-                $logging | Add-Member -NotePropertyName "ErrorCode" -NotePropertyValue "Error During User Increase"
+                $logging | Add-Member -NotePropertyName "ErrorCode" -NotePropertyValue "Error During WorkSpaces $APICall"
                 $logging | Add-Member -NotePropertyName "ErrorMessage" -NotePropertyValue $msg
             }
         }
@@ -386,7 +386,7 @@ function Optimize-APIRequest{
             }Catch{
                 $msg = $_
                 $logging = New-Object -TypeName PSobject
-                $logging | Add-Member -NotePropertyName "ErrorCode" -NotePropertyValue "Error During User Increase"
+                $logging | Add-Member -NotePropertyName "ErrorCode" -NotePropertyValue "Error Enabling Admin Maintenance"
                 $logging | Add-Member -NotePropertyName "ErrorMessage" -NotePropertyValue $msg
             }
         }
@@ -400,7 +400,7 @@ function Optimize-APIRequest{
             }Catch{
                 $msg = $_
                 $logging = New-Object -TypeName PSobject
-                $logging | Add-Member -NotePropertyName "ErrorCode" -NotePropertyValue "Error During User Increase"
+                $logging | Add-Member -NotePropertyName "ErrorCode" -NotePropertyValue "Error Disabling Admin Maintenance"
                 $logging | Add-Member -NotePropertyName "ErrorMessage" -NotePropertyValue $msg
             }
         }
