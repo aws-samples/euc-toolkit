@@ -170,8 +170,10 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
                     <ComboBox Name="cmboBulkProtocol" HorizontalAlignment="Left" Height="24" Margin="319,189,0,0" VerticalAlignment="Top" Width="327" Grid.ColumnSpan="2" Grid.Column="1" />
                     <Label Name="lblBulkWSP" Content="WSP WorkSpaces:" HorizontalAlignment="Left" Height="25" Margin="21,163,0,0" VerticalAlignment="Top" Width="156" HorizontalContentAlignment="Center" Grid.Column="3"/>
                     <Label Name="lblBulkWSPCounter" Content="X" HorizontalAlignment="Left" Height="25" Margin="182,163,0,0" VerticalAlignment="Top" Width="96" HorizontalContentAlignment="Center" RenderTransformOrigin="0.502,1.015" Grid.Column="3"/>
-                    <Label Name="lblBulkPCOIPCounter" Content="X" HorizontalAlignment="Left" Height="25" Margin="182,195,0,0" VerticalAlignment="Top" Width="96" HorizontalContentAlignment="Center" RenderTransformOrigin="0.502,1.015" Grid.Column="3"/>
-                    <Label Name="lblBulkPCOIP" Content="PCOIP WorkSpaces:" HorizontalAlignment="Left" Height="25" Margin="21,195,0,0" VerticalAlignment="Top" Width="156" HorizontalContentAlignment="Center" Grid.Column="3"/>
+                    <Label Name="lblBulkPCOIPCounter" Content="X" HorizontalAlignment="Left" Height="25" Margin="182,185,0,0" VerticalAlignment="Top" Width="96" HorizontalContentAlignment="Center" RenderTransformOrigin="0.502,1.015" Grid.Column="3"/>
+                    <Label Name="lblBulkPCOIP" Content="PCOIP WorkSpaces:" HorizontalAlignment="Left" Height="25" Margin="21,185,0,0" VerticalAlignment="Top" Width="156" HorizontalContentAlignment="Center" Grid.Column="3"/>           
+                    <Label Name="lblBulkBYOPCounter" Content="X" HorizontalAlignment="Left" Height="25" Margin="182,205,0,0" VerticalAlignment="Top" Width="96" HorizontalContentAlignment="Center" RenderTransformOrigin="0.502,1.015" Grid.Column="3"/>
+                    <Label Name="lblBulkBYOP" Content="BYOP WorkSpaces:" HorizontalAlignment="Left" Height="25" Margin="21,205,0,0" VerticalAlignment="Top" Width="156" HorizontalContentAlignment="Center" Grid.Column="3"/>
                 </Grid>
             </TabItem>
 
