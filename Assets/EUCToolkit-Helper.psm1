@@ -65,7 +65,7 @@ function Get-LocalWorkSpacesDB(){
             $entry | Add-Member -NotePropertyName "UserVolume" -NotePropertyValue $Wks.WorkspaceProperties.UserVolumeSizeGib
             $entry | Add-Member -NotePropertyName "RunningMode" -NotePropertyValue $Wks.WorkspaceProperties.RunningMode
             #Update for Protocol
-            if($Wks.WorkspaceProperties.Protocols -like "WSP"){$wsProto = 'WSP'}else{$wsProto = 'PCoIP'}
+            if($Wks.WorkspaceProperties.Protocols -like "WSP"){$wsProto = 'WSP'}elseif ($Wks.WorkspaceProperties.Protocols -like "PCOIP"){$wsProto = 'PCoIP'} else{$wsProto = 'BYOP'}
             $entry | Add-Member -NotePropertyName "Protocol" -NotePropertyValue $wsProto
             $entry | Add-Member -NotePropertyName "IPAddress" -NotePropertyValue $Wks.IPAddress
             $entry | Add-Member -NotePropertyName "RegCode" -NotePropertyValue ($DeployedRegion | Where-Object {$_.directoryId -eq $Wks.directoryId}).RegistrationCode

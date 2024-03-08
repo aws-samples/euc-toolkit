@@ -169,6 +169,7 @@ function Update-Counter(){
     $stopped = ($global:WorkSpacesDB | Where-Object { $_.State -eq "STOPPED"}).Count
     $PCoIP = ($global:WorkSpacesDB | Where-Object { $_.Protocol -eq "PCOIP"}).Count
     $WSP = ($global:WorkSpacesDB | Where-Object { $_.Protocol -eq "WSP"}).Count
+    $BYOP = ($global:WorkSpacesDB | Where-Object { $_.Protocol -eq "BYOP"}).Count
 
     if($available -eq 0 -or $NULL -eq $available){
         $available = 0
@@ -178,6 +179,7 @@ function Update-Counter(){
     $TotalStopped_Count.content = $stopped
     $lblBulkPCOIPCounter.content = $PCoIP
     $lblBulkWSPCounter.content = $WSP
+    $lblBulkBYOPCounter.content = $BYOP
 }
 
 ###############################################
@@ -1159,10 +1161,12 @@ $btnQueryWSUpdateDB.Add_Click({
 $cmboProtocol.items.Add("All")
 $cmboProtocol.items.Add("WSP")
 $cmboProtocol.items.Add("PCoIP")
+$cmboProtocol.items.Add("BYOP")
 $cmboProtocol.SelectedIndex=0
 $cmboBulkProtocol.items.Add("All")
 $cmboBulkProtocol.items.Add("WSP")
 $cmboBulkProtocol.items.Add("PCoIP")
+$cmboBulkProtocol.items.Add("BYOP")
 $cmboBulkProtocol.SelectedIndex=0
 
 # Initialization
