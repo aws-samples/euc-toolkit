@@ -1,0 +1,2 @@
+WorkSpaceSideLogs,Backups,PSEXEC,Disk2VHD,Reporting,CloudWatchAccessLogs
+c:\temp\,c:\temp\,c:\temp\,c:\temp\,c:\temp\,arn:aws:logs:us-east-1:0123456789:log-group:/aws/events/WorkSpacesAccessLogs:*

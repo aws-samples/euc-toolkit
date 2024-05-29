@@ -1,0 +1,17 @@
+{
+    "view": "timeSeries",
+    "stacked": false,
+    "metrics": [
+        [ "AWS/WorkSpaces", "ConnectionSuccess", "WorkspaceId", "ws-123456"],
+        [ ".", "ConnectionFailure", ".", "."],
+        [ ".", "ConnectionAttempt", ".", "."],
+        [ ".", "SessionLaunchTime", ".", "."],
+        [ ".", "SessionDisconnect", ".", "."]
+    ],
+    "period": 300,
+    "title": "Connection summary over the past 24 Hours",
+    "width": 500,
+    "height": 200,
+    "start": "-PT24H",
+    "end": "P0D"
+}

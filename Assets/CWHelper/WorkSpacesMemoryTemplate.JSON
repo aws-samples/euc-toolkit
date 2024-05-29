@@ -2,13 +2,12 @@
     "view": "timeSeries",
     "stacked": false,
     "metrics": [
-        [ "CWAgent", "Memory % Committed Bytes In Use", "host", "WSAMZN-V5GUOTVF", "objectname", "Memory" ]
+        [ "AWS/WorkSpaces", "MemoryUsage", "WorkspaceId", "ws-123456"]
     ],
-    "region": "us-east-1",
     "period": 300,
-    "title": "Committed Memory last Month",
+    "title": "Memory usage past 24 Hours",
     "width": 500,
     "height": 200,
-    "start":  "-PT1008H",
+    "start": "-PT24H",
     "end": "P0D"
 }

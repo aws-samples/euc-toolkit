@@ -1,0 +1,37 @@
+{
+    "view": "timeSeries",
+    "stacked": false,
+    "metrics": [
+        [ "AWS/WorkSpaces", "InSessionLatency", "WorkspaceId", "ws-123456"]
+    ],
+    "period": 300,
+    "annotations": {
+        "horizontal": [
+            {
+                "color": "#2ca02c",
+                "value": 50,
+                "fill": "below"
+            },
+            [
+                {
+                    "color": "#ffbb78",
+                    "value": 50
+                },
+                {
+                    "value": 100,
+                    "label": ""
+                }
+            ],
+            {
+                "color": "#d62728",
+                "value": 100,
+                "fill": "above"
+            }
+        ]
+    },
+    "title": "Historical Latency over the past 24 Hours",
+    "width": 500,
+    "height": 200,
+    "start": "-PT24H",
+    "end": "P0D"
+}

@@ -23,7 +23,6 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     to the EUCToolkit-Helper module. For more information, see the link below:
     https://github.com/aws-samples/euc-toolkit
 #>
-
 Write-Host "Please wait while the EUC Toolkit Initializes"
 $env:PSModulePath = "$env:PSModulePath;$($PSScriptRoot+"\Assets\EUCToolkit-Helper.psm1")"
 Import-Module -Name $($PSScriptRoot+"\Assets\EUCToolkit-Helper.psm1") -Force
@@ -46,6 +45,9 @@ $WksMainXaml.SelectNodes("//*[@Name]") | ForEach-Object {Set-Variable -Name ($_.
 if(Get-AWSCredential){
     $lblPermissions.Content = "Profile Manually Set"
     $global:InstanceProfile = $false
+}elseif(Test-Path env:AWS_ACCESS_KEY_ID) {
+    $lblPermissions.Content = "Utilizing Environment Variables"
+    $global:InstanceProfile = $false										  
 }else{
     $global:InstanceProfile = $true
     try{
@@ -128,20 +130,20 @@ function Get-ImpactedWS(){
     }
     $allImpactedWS = $global:WorkSpacesDB | Where-Object { ($_.Region -eq $selectWKSRegion.SelectedItem)}
     if($bulkdirectoryId -like "All Directories"){
-        $allImpactedWS = $allImpactedWS | Select-Object directoryId, WorkSpaceId,UserName,Region,FirstName,LastName,ComputerName,Email,RunningMode,State,Protocol
+        $allImpactedWS = $allImpactedWS | Select-Object directoryId, WorkSpaceId,UserName,Region,FirstName,LastName,ComputerName,Email,RunningMode,State,Protocol,BundleId
     }else{
-        $allImpactedWS = $allImpactedWS | Where-Object { ($_.directoryId -eq $bulkdirectoryId) }| Select-Object directoryId, WorkSpaceId,UserName,Region,FirstName,LastName,ComputerName,Email,RunningMode,State,Protocol
+        $allImpactedWS = $allImpactedWS | Where-Object { ($_.directoryId -eq $bulkdirectoryId) }| Select-Object directoryId, WorkSpaceId,UserName,Region,FirstName,LastName,ComputerName,Email,RunningMode,State,Protocol,BundleId
     }
     if($selectRunningModeFilterCombo.SelectedItem -ne "Select Running Mode"){
-        $allImpactedWS = $allImpactedWS | Where-Object { ($_.RunningMode -like ($selectRunningModeFilterCombo.SelectedItem))} | Select-Object directoryId, WorkSpaceId,UserName,Region,FirstName,LastName,ComputerName,Email,RunningMode,State,Protocol
+        $allImpactedWS = $allImpactedWS | Where-Object { ($_.RunningMode -like ($selectRunningModeFilterCombo.SelectedItem))} | Select-Object directoryId, WorkSpaceId,UserName,Region,FirstName,LastName,ComputerName,Email,RunningMode,State,Protocol,BundleId
     }
     if($selectWKSBundle.SelectedItem -ne "Select Bundle"){
         $bundleSTR = ($selectWKSBundle.SelectedItem.split(" "))[0]
-        $allImpactedWS = $allImpactedWS | Where-Object { ($_.BundleId -like ($bundleSTR))} | Select-Object directoryId, WorkSpaceId,UserName,Region,FirstName,LastName,ComputerName,Email,RunningMode,State,Protocol
+        $allImpactedWS = $allImpactedWS | Where-Object { ($_.BundleId -like ($bundleSTR))} | Select-Object directoryId, WorkSpaceId,UserName,Region,FirstName,LastName,ComputerName,Email,RunningMode,State,Protocol,BundleId
     }
     if($cmboBulkProtocol.SelectedItem -ne "All"){
         $protocolSTR = ($cmboBulkProtocol.SelectedItem.split(" "))[0]
-        $allImpactedWS = $allImpactedWS | Where-Object { ($_.Protocol -like ($protocolSTR))} | Select-Object directoryId, WorkSpaceId,UserName,Region,FirstName,LastName,ComputerName,Email,RunningMode,State,Protocol
+        $allImpactedWS = $allImpactedWS | Where-Object { ($_.Protocol -like ($protocolSTR))} | Select-Object directoryId, WorkSpaceId,UserName,Region,FirstName,LastName,ComputerName,Email,RunningMode,State,Protocol,BundleId
     }
     foreach ($impactedWS in $allImpactedWS){
         if($NULL -ne $impactedWS.WorkSpaceId -and $lstImpactedWorkSpaces.Items.WorkSpaceId -notcontains $impactedWS.WorkSpaceId){
@@ -169,8 +171,7 @@ function Update-Counter(){
     $stopped = ($global:WorkSpacesDB | Where-Object { $_.State -eq "STOPPED"}).Count
     $PCoIP = ($global:WorkSpacesDB | Where-Object { $_.Protocol -eq "PCOIP"}).Count
     $WSP = ($global:WorkSpacesDB | Where-Object { $_.Protocol -eq "WSP"}).Count
-    $BYOP = ($global:WorkSpacesDB | Where-Object { $_.Protocol -eq "BYOP"}).Count
-
+	$BYOP = ($global:WorkSpacesDB | Where-Object { $_.Protocol -eq "BYOP"}).Count
     if($available -eq 0 -or $NULL -eq $available){
         $available = 0
     }
@@ -179,7 +180,7 @@ function Update-Counter(){
     $TotalStopped_Count.content = $stopped
     $lblBulkPCOIPCounter.content = $PCoIP
     $lblBulkWSPCounter.content = $WSP
-    $lblBulkBYOPCounter.content = $BYOP
+	$lblBulkBYOPCounter.content = $BYOP
 }
 
 ###############################################
@@ -205,8 +206,14 @@ $txtUserName.Add_TextChanged({
 })
 
 $btnUpdateData.Add_Click({
+	$btnUpdateData.Content="Running..."
+    $btnUpdateData.IsEnabled=$false
+								   
     Update-WorkSpaceObject
     Search-WorkSpaces
+
+    $btnUpdateData.content="Refresh"
+    $btnUpdateData.IsEnabled=$true
 })
 
 $cmboProtocol.add_SelectionChanged({
@@ -543,15 +550,15 @@ $btnGetUserExperience.Add_Click({
     $global:cloudWatchRun++
 
     #Clear out last run
-    $CloudWatchHistoricalLatency.Source =($PSScriptRoot+"\\Assets\\CWHelper\\WorkSpaceHistoricalLatency-Start.png") 
-    $CloudWatchWorkSpaceLatency.Source =($PSScriptRoot+"\\Assets\\CWHelper\\WorkSpaceLatency-Start.png")
+    $CloudWatchHistoricalLatency.Source =($PSScriptRoot+"\\Assets\\CWHelper\\WorkSpacesHistoricalLatency-Start.png") 
+    $CloudWatchWorkSpaceLatency.Source =($PSScriptRoot+"\\Assets\\CWHelper\\WorkSpacesUDPPacketLoss-Start.png")
     $CloudWatchWorkSpaceLaunch.Source =($PSScriptRoot+"\\Assets\\CWHelper\\WorkSpacesSessionLaunch-Start.png") 
     $CloudWatchWorkSpaceCPU.Source =($PSScriptRoot+"\\Assets\\CWHelper\\WorkSpacesCPU-Start.png") 
     $CloudWatchWorkSpaceMemory.Source =($PSScriptRoot+"\\Assets\\CWHelper\\WorkSpacesMemory-Start.png")
     $CloudWatchWorkSpaceDisk.Source =($PSScriptRoot+"\\Assets\\CWHelper\\WorkSpacesDisk-Start.png")
-    $CloudWatchWorkSpaceCPU.Visibility ="Hidden"
-    $CloudWatchWorkSpaceMemory.Visibility ="Hidden"
-    $CloudWatchWorkSpaceDisk.Visibility ="Hidden"
+    $CloudWatchWorkSpaceCPU.Visibility ="Visible"
+    $CloudWatchWorkSpaceMemory.Visibility ="Visible"
+    $CloudWatchWorkSpaceDisk.Visibility ="Visible"
     $CloudWatchLoginInfo.items.clear()
     $CloudWatchWorkSpaceModifications.items.clear()
 
@@ -566,25 +573,25 @@ $btnGetUserExperience.Add_Click({
     #Move to CloudWatch Tab
     $tabCloudWatch.Visibility ="Visible"
     $tabControl.SelectedIndex =5
-    $CWAgentInstall = $cmboCWAgentInstall.SelectedItem.ToString()
+
     
     $CloudWatch_Tick={ 
         $imageRepo = "$PSScriptRoot\Assets\CWHelper\SelectedWSMetrics"
         $resources = Get-ChildItem -Path $imageRepo
         if($resources.count -eq $global:ImagesExpected){
             start-sleep -Seconds 1
-            $CloudWatchHistoricalLatency.Source = ($imageRepo+"\WorkSpaceHistoricalLatency"+$global:cloudWatchRun+".png")
-            $CloudWatchWorkSpaceLatency.Source = ($imageRepo+"\WorkSpaceLatency"+$global:cloudWatchRun+".png")
-            $CloudWatchWorkSpaceLaunch.Source = ($imageRepo+"\WorkSpacesSessionLaunch"+$global:cloudWatchRun+".png")
-            $CWAgentInstall=$cmboCWAgentInstall.SelectedItem.ToString()
-            if($CWAgentInstall -eq "True"){
-                    $CloudWatchWorkSpaceCPU.Source = ($imageRepo+"\WorkSpacesCPU"+$global:cloudWatchRun+".png") 
-                    $CloudWatchWorkSpaceCPU.Visibility ="Visible"
-                    $CloudWatchWorkSpaceMemory.Source = ($imageRepo+"\WorkSpacesMemory"+$global:cloudWatchRun+".png") 
-                    $CloudWatchWorkSpaceMemory.Visibility ="Visible"
-                    $CloudWatchWorkSpaceDisk.Source = ($imageRepo+"\WorkSpacesDisk"+$global:cloudWatchRun+".png") 
-                    $CloudWatchWorkSpaceDisk.Visibility ="Visible"
-            }
+            $CloudWatchHistoricalLatency.Source = ($imageRepo+"\WorkSpacesHistoricalLatency"+$global:cloudWatchRun+".png")
+            $CloudWatchWorkSpaceLatency.Source = ($imageRepo+"\WorkSpacesUDP"+$global:cloudWatchRun+".png")
+            $CloudWatchWorkSpaceLaunch.Source = ($imageRepo+"\WorkSpacesConnectionSummary"+$global:cloudWatchRun+".png")
+																	   
+										   
+            $CloudWatchWorkSpaceCPU.Source = ($imageRepo+"\WorkSpacesCPU"+$global:cloudWatchRun+".png") 
+            $CloudWatchWorkSpaceCPU.Visibility ="Visible"
+            $CloudWatchWorkSpaceMemory.Source = ($imageRepo+"\WorkSpacesMemory"+$global:cloudWatchRun+".png") 
+            $CloudWatchWorkSpaceMemory.Visibility ="Visible"
+            $CloudWatchWorkSpaceDisk.Source = ($imageRepo+"\WorkSpacesDisk"+$global:cloudWatchRun+".png") 
+            $CloudWatchWorkSpaceDisk.Visibility ="Visible"
+			 
             $global:CloudWatchTimer.Stop()
             $global:CloudWatchTimer.Dispose()
         }
@@ -618,36 +625,31 @@ $btnGetUserExperience.Add_Click({
     if($txtCloudWatchAccessLogs.Text-ne ""){
         $AccessLogsRegion=($txtCloudWatchAccessLogs.Text-split ":")[3]
         $AccessLogsName=($txtCloudWatchAccessLogs.Text-split ":")[6]
-        $global:ImagesExpected++
+        $global:ImagesExpected+= 2													   
+								
     }
 
-    if($txtCloudTrailLogs.Text-ne ""){
-        $CloudTrailsLogsRegion=($txtCloudTrailLogs.Text-split ":")[3]
-        $CloudTrailsLogsName=($txtCloudTrailLogs.Text-split ":")[6]
-        $global:ImagesExpected++
-    }
-
-    $CWAgentInstall=$cmboCWAgentInstall.SelectedItem.ToString()
+															  														   
 
     if($global:InstanceProfile -eq $true){
         Get-CloudWatchImagesServiceMetrics -workingDirectory $workingDirectory -WSId $WorkSpaceIdValue.content -AWSProfile $false -region $RegionValue.Content -CWRun $global:cloudWatchRun
-        if ($CWAgentInstall -eq "True"){
-            Get-CloudWatchImagesWorkSpaceMetrics -workingDirectory $workingDirectory -ComputerName $ComputerNameValue.content -region $RegionValue.Content -CWRun $global:cloudWatchRun
-            $global:ImagesExpected += 3 
-        }
+										
+        Get-CloudWatchImagesWorkSpaceMetrics -workingDirectory $workingDirectory -WSId $WorkSpaceIdValue.content -region $RegionValue.Content -CWRun $global:cloudWatchRun
+        $global:ImagesExpected += 3 
+		 
         Get-CloudWatchStats -workingDirectory $workingDirectory -WorkSpaceAccessLogs $AccessLogsName -CloudTrailLogs $CloudTrailsLogsName -WorkSpaceId $WorkSpaceIdValue.content -AWSProfile $false -CloudTrailRegion $CloudTrailsLogsRegion -AccessLogsRegion $AccessLogsRegion -CWRun $global:cloudWatchRun
     }else{
         $CurrentCred = Get-AWSCredential
         Get-CloudWatchImagesServiceMetrics -workingDirectory $workingDirectory -WSId $WorkSpaceIdValue.content -AWSProfile $CurrentCred -region $RegionValue.Content -CWRun $global:cloudWatchRun
-        if ($CWAgentInstall -eq "True"){
-            Get-CloudWatchImagesWorkSpaceMetrics -workingDirectory $workingDirectory -ComputerName $ComputerNameValue.content -AWSProfile $CurrentCred -region $RegionValue.Content -CWRun $global:cloudWatchRun
-            $global:ImagesExpected += 3
-        }
+										
+        Get-CloudWatchImagesWorkSpaceMetrics -workingDirectory $workingDirectory -WSId $WorkSpaceIdValue.content -AWSProfile $CurrentCred -region $RegionValue.Content -CWRun $global:cloudWatchRun
+        $global:ImagesExpected += 3
+		 
         Get-CloudWatchStats -workingDirectory $workingDirectory -WorkSpaceAccessLogs $AccessLogsName -CloudTrailLogs $CloudTrailsLogsName -WorkSpaceId $WorkSpaceIdValue.content -CloudTrailRegion $CloudTrailsLogsRegion -AccessLogsRegion $AccessLogsRegion -CWRun $global:cloudWatchRun
     }
 
     $global:CloudWatchTimer.Enabled = $True 
-    $global:CloudWatchTimer.Interval = 3000 
+    $global:CloudWatchTimer.Interval = 1000 
     $global:CloudWatchTimer.add_Tick($CloudWatch_Tick) 
     $global:imagesRetrieved = 0
 })
@@ -732,13 +734,13 @@ $selectWKSRegion.add_SelectionChanged({
     $migrateBundleCombo.items.Clear()
     $selectWKSBundle.items.Clear()
     $migrateBundleCombo.items.add("Select Bundle")
-    $bundles = Get-WKSWorkspaceBundle -Region $selectWKSRegion.SelectedItem
+    $bundles = $global:WorkSpacesDB | Where-Object { ($_.Region -eq $selectWKSRegion.SelectedItem)} | Select-Object BundleId, Protocol, BundleName -Unique
     if($bundles.count -eq 0){
         $selectWKSBundle.items.add("No Custom Bundles Found")
         $migrateBundleCombo.items.add("No Custom Bundles Found")
     }else{
         foreach($bundle in $bundles){
-            $BundleConcat = $bundle.BundleId + " (" + $bundle.Name +")"
+            $BundleConcat = $bundle.BundleId + " (" + $bundle.BundleName +")"
             $selectWKSBundle.items.add("$BundleConcat")
             $migrateBundleCombo.items.add("$BundleConcat")
         }
@@ -752,7 +754,7 @@ $selectWKSDirectory.add_SelectionChanged({
 })
 
 $cmboBulkProtocol.add_SelectionChanged({
-    Search-WorkSpaces
+    Get-ImpactedWS
 })
 
 $selectWKSBundle.add_SelectionChanged({
@@ -1014,7 +1016,7 @@ function Get-AppStreamSessions(){
             $fleetName = $null
             $fleetName = Get-APSAssociatedFleetList -StackName $stack.Name -Region $region
             if($null -ne $fleetName){
-                $SessionList = Get-APSSessionList -StackName $stack.Name -FleetName $fleetName -Region $region
+                $SessionList = Get-APSSessionList -StackName $stack.Name -FleetName $fleetName -Region $region -limit 50
                 foreach ($session in $SessionList){
                     $AS2Session = New-Object -TypeName PSobject
                     $AS2Session | Add-Member -NotePropertyName "UserId" -NotePropertyValue $session.UserId
@@ -1159,14 +1161,14 @@ $btnQueryWSUpdateDB.Add_Click({
 
 # Populate protocol dropown options
 $cmboProtocol.items.Add("All")
+$cmboProtocol.items.Add("BYOP")
 $cmboProtocol.items.Add("WSP")
 $cmboProtocol.items.Add("PCoIP")
-$cmboProtocol.items.Add("BYOP")
 $cmboProtocol.SelectedIndex=0
 $cmboBulkProtocol.items.Add("All")
+$cmboBulkProtocol.items.Add("BYOP")
 $cmboBulkProtocol.items.Add("WSP")
 $cmboBulkProtocol.items.Add("PCoIP")
-$cmboBulkProtocol.items.Add("BYOP")
 $cmboBulkProtocol.SelectedIndex=0
 
 # Initialization
@@ -1181,15 +1183,47 @@ foreach($region in $regions){
 }
 
 # Preset admin tab textboxes
+
 $tmpPath = $($PSScriptRoot)+"\Assets\"
-$txtServerSideLogs.Text = $tmpPath
-$txtBackUpDest.Text = $tmpPath
-$txtPSExecPath.Text = $tmpPath
-$txtDisk2VHDPath.Text = $tmpPath
-$txtReporting.Text = $tmpPath
-$cmboCWAgentInstall.Items.Add("False")
-$cmboCWAgentInstall.Items.Add("True")
-$cmboCWAgentInstall.SelectedIndex=0
+							  
+										
+												 
+											  
+						   
+# Preset admin tab textboxes
+
+$tmpPath = $($PSScriptRoot)+"\Assets\"
+#if there is a CSV with Values
+$settingsCSVFile=$tmpPath+"Settings.csv"
+if ([System.IO.File]::Exists($settingsCSVFile)) {
+    $loadSettings =Import-Csv $settingsCSVFile
+    $loadSettings |ForEach{
+        $txtServerSideLogs.Text = $_.WorkSpaceSideLogs
+        $txtBackUpDest.Text = $_.Backups
+        $txtPSExecPath.Text = $_.PSEXEC 
+        $txtDisk2VHDPath.Text = $_.Disk2VHD
+        $txtReporting.Text = $_.Reporting
+        $txtCloudWatchAccessLogs.Text= $_.CloudWatchAccessLogs
+    }
+}
+else {
+    $txtServerSideLogs.Text = $tmpPath
+    $txtBackUpDest.Text = $tmpPath
+    $txtPSExecPath.Text = $tmpPath
+    $txtDisk2VHDPath.Text = $tmpPath
+    $txtReporting.Text = $tmpPath
+}
+
+
+
+								  
+									
+								 
+ 
+
+
+
+
 
 # Populate Compute Dropdown in Main
 $selectRunningModeFilterCombo.items.Clear()

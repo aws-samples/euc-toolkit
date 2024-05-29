@@ -68,6 +68,10 @@ Contains all of the code that interacts with the GUI. The functions in this scri
 
 Contains all of the functions that interact with WorkSpaces and AppStream 2.0.
 
+**Settings.csv**
+
+Contains paths for reporting, logs collection, tools, and CloudWatch Log groups.
+
 **Updating CloudWatch Images**
 
 Included in the EUC toolkit are several JSON files that are used to generate images from CloudWatch. These can be customized, see this [documentation](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-metric-streams-formats-json.html) for additional information.
@@ -79,18 +83,19 @@ Included in the EUC toolkit are several JSON files that are used to generate ima
 |-Assets/
   |-CWHelper/
     |-SelectedWSMetrics/
-    |-WorkSpaceHistoricalLatency-Start.png
-    |-WorkSpaceHistoricalLatencyTemplate.JSON
-    |-WorkSpaceLatency-Start.png
-    |-WorkSpaceLatencyTemplate.JSON
-    |-WorkSpacesSessionLaunch.png
-    |-WorkSpacesSessionLaunchTemplate.JSON
+    |-WorkSpacesConnectionSummaryTemplate.json
+    |-WorkSpacesUDPPacketLoss-Start.png
+    |-WorkSpacesUDPTemplate.JSON
+    |-WorkSpacesHistoricalLatency-Start.png
+    |-WorkSpacesHistoricalLatencyTemplate.JSON
     |-WorkSpacesCPU-Start.png
     |-WorkSpacesCPUTemplate.JSON
-    |-WorkSpacesDisk.png
-    |-WorkSpacesDiskTemplate.json
-    |-WorkSpacesMemory.png
-    |-WorkSpacesMemoryTemplate.json
+    |-WorkSpacesDisk-Start.png
+    |-WorkSpacesDiskTemplate.JSON
+    |-WorkSpacesMemory-Start.png
+    |-WorkSpacesMemoryTemplate.JSON
+    |-WorkSpacesSessionLaunch-Start.png
+    |-WorkSpacesSessionLaunchTemplate.JSON
   |-EUCToolkit-Helper.psm1
   |-EUCToolkit-MainGUI.xml
 |-EUCToolkit-Main.ps1

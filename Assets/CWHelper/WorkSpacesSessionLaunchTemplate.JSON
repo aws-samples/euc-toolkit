@@ -2,7 +2,7 @@
     "view": "timeSeries",
     "stacked": false,
     "metrics": [
-        [ "AWS/WorkSpaces", "SessionLaunchTime", "WorkspaceId", "ws-04dsqzg18" ]
+        [ "AWS/WorkSpaces", "SessionLaunchTime", "WorkspaceId", "ws-123456" ]
     ],
     "period": 300,
     "title": "Session Launch time past month",

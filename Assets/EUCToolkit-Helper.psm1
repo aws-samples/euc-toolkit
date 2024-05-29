@@ -1,6 +1,5 @@
 <#
 Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-
 Permission is hereby granted, free of charge, to any person obtaining a copy of this
 software and associated documentation files (the "Software"), to deal in the Software
 without restriction, including without limitation the rights to use, copy, modify,
@@ -30,29 +29,12 @@ function Get-LocalWorkSpacesDB(){
     # This function build a PSObject that contains all of your WorkSpaces information. The object will act as a local DB for the GUI.
     # If you need to have object persistence to save API calls, this function can be replaced with a function that calls your persistent store.
     $WorkSpacesDDB = @()
-    $DeployedRegions = @()
-
-    # Current WorkSpaces Regions. See link below for current WorkSpaces availbility
-    # https://docs.aws.amazon.com/workspaces/latest/adminguide/azs-workspaces.html
-    $regions = @('us-east-1','us-west-2', 'ap-south-1', 'ap-northeast-2', 'ap-southeast-1', 'ap-southeast-2', 'ap-northeast-1', 'ca-central-1', 'eu-central-1','eu-west-1', 'eu-west-2', 'sa-east-1')
-
-    # Find regions that have WorkSpaces deployments
-    foreach($region in $regions){
-        $RegionsCall = Get-WKSWorkspaceDirectories -Region $region
-        if($RegionsCall){
-            foreach($WksRegion in $RegionsCall){
-                $DeployedRegionsTemp = New-Object -TypeName PSobject
-                $DeployedRegionsTemp | Add-Member -NotePropertyName "Region" -NotePropertyValue $region
-                $DeployedRegionsTemp | Add-Member -NotePropertyName "RegistrationCode" -NotePropertyValue $WksRegion.RegistrationCode
-                $DeployedRegionsTemp | Add-Member -NotePropertyName "DirectoryId" -NotePropertyValue $WksRegion.DirectoryId
-                $DeployedRegions += $DeployedRegionsTemp
-            }
-        }
-    }
+    $DeployedRegions = Get-WksDirectories
     
     # Finds all current WorkSpaces. If Actice Directory cannot be reached, those attributes are omitted.
     foreach($DeployedRegion in $DeployedRegions){
         $RegionalWks = Get-WKSWorkSpaces -Region $DeployedRegion.Region -DirectoryId $DeployedRegion.DirectoryId
+        $RegionalBundles = Get-AllBundles -Region $DeployedRegion.Region -Custom $true
         foreach ($Wks in $RegionalWks){
             $adErr = $false
             $entry = New-Object -TypeName PSobject
@@ -70,8 +52,21 @@ function Get-LocalWorkSpacesDB(){
             $entry | Add-Member -NotePropertyName "IPAddress" -NotePropertyValue $Wks.IPAddress
             $entry | Add-Member -NotePropertyName "RegCode" -NotePropertyValue ($DeployedRegion | Where-Object {$_.directoryId -eq $Wks.directoryId}).RegistrationCode
             $entry | Add-Member -NotePropertyName "directoryId" -NotePropertyValue $Wks.directoryId
+            $entry | Add-Member -NotePropertyName "directoryName" -NotePropertyValue ($DeployedRegion | Where-Object {$_.directoryId -eq $Wks.directoryId}).DirectoryName
+            $entry | Add-Member -NotePropertyName "directoryAlias" -NotePropertyValue ($DeployedRegion | Where-Object {$_.directoryId -eq $Wks.directoryId}).DirectoryAlias
+            $entry | Add-Member -NotePropertyName "directoryType" -NotePropertyValue ($DeployedRegion | Where-Object {$_.directoryId -eq $Wks.directoryId}).DirectoryType
+            $entry | Add-Member -NotePropertyName "directoryState" -NotePropertyValue ($DeployedRegion | Where-Object {$_.directoryId -eq $Wks.directoryId}).DirectoryState
+            $entry | Add-Member -NotePropertyName "directoryUserEnabledAsLocalAdministrator" -NotePropertyValue ($DeployedRegion | Where-Object {$_.directoryId -eq $Wks.directoryId}).DirectoryUserEnabledAsLocalAdministrator
+            $entry | Add-Member -NotePropertyName "directoryTenancy" -NotePropertyValue ($DeployedRegion | Where-Object {$_.directoryId -eq $Wks.directoryId}).DirectoryTenancy
+            $entry | Add-Member -NotePropertyName "directoryAvailableIPs" -NotePropertyValue ($DeployedRegion | Where-Object {$_.directoryId -eq $Wks.directoryId}).DirectoryAvailableIPs
             $entry | Add-Member -NotePropertyName "State" -NotePropertyValue $Wks.State
             $entry | Add-Member -NotePropertyName "BundleId" -NotePropertyValue $Wks.BundleId
+            if((($RegionalBundles | Where-Object {$_.BundleId -like $Wks.BundleId}).Name) -eq ''){
+                $unavailablePubBundle = Get-WKSWorkspaceBundle -BundleId $Wks.BundleId -Region $DeployedRegion.Region
+                $entry | Add-Member -NotePropertyName "BundleName" -NotePropertyValue $unavailablePubBundle.Name
+            }else{
+                $entry | Add-Member -NotePropertyName "BundleName" -NotePropertyValue ($RegionalBundles | Where-Object {$_.BundleId -eq $Wks.BundleId}).Name
+            }
             try{
                 $ADUser = Get-ADUser -Identity $Wks.UserName -Properties "EmailAddress"
             }catch{
@@ -91,6 +86,78 @@ function Get-LocalWorkSpacesDB(){
         }
     }
     return $WorkSpacesDDB
+}
+
+function Get-WksDirectories(){
+    $DeployedRegions = @()
+
+    # Current WorkSpaces Regions. See link below for current WorkSpaces availbility
+    # https://docs.aws.amazon.com/workspaces/latest/adminguide/azs-workspaces.html
+    $regions = @('us-east-1','us-west-2', 'ap-south-1', 'ap-northeast-2', 'ap-southeast-1', 'ap-southeast-2', 'ap-northeast-1', 'ca-central-1', 'eu-central-1','eu-west-1', 'eu-west-2', 'sa-east-1')
+
+    # Find regions that have WorkSpaces deployments
+    foreach($region in $regions){
+        $RegionsCall = Get-WKSWorkspaceDirectories -Region $region
+        if($RegionsCall){
+            foreach($WksRegion in $RegionsCall){
+                $DeployedRegionsTemp = New-Object -TypeName PSobject
+                $DeployedRegionsTemp | Add-Member -NotePropertyName "Region" -NotePropertyValue $region
+                $DeployedRegionsTemp | Add-Member -NotePropertyName "RegistrationCode" -NotePropertyValue $WksRegion.RegistrationCode
+                $DeployedRegionsTemp | Add-Member -NotePropertyName "DirectoryId" -NotePropertyValue $WksRegion.DirectoryId
+                $DeployedRegionsTemp | Add-Member -NotePropertyName "DirectoryName" -NotePropertyValue $WksRegion.DirectoryName
+                $DeployedRegionsTemp | Add-Member -NotePropertyName "DirectoryAlias" -NotePropertyValue $WksRegion.Alias
+                $DeployedRegionsTemp | Add-Member -NotePropertyName "DirectoryType" -NotePropertyValue $WksRegion.Type
+                $DeployedRegionsTemp | Add-Member -NotePropertyName "DirectoryState" -NotePropertyValue $WksRegion.State
+                $DeployedRegionsTemp | Add-Member -NotePropertyName "DirectoryUserEnabledAsLocalAdministrator" -NotePropertyValue $WksRegion.WorkspaceCreationProperties.UserEnabledAsLocalAdministrator
+                $DeployedRegionsTemp | Add-Member -NotePropertyName "DirectoryTenancy" -NotePropertyValue $WksRegion.Tenancy
+                $subnetA = Get-EC2Subnet -SubnetId $WksRegion.SubnetIds[0] -Region $region
+                $subnetB = Get-EC2Subnet -SubnetId $WksRegion.SubnetIds[1] -Region $region
+                $dirAvailableIPs = $subnetA.AvailableIpAddressCount + $subnetB.AvailableIpAddressCount
+                $DeployedRegionsTemp | Add-Member -NotePropertyName "DirectoryAvailableIPs" -NotePropertyValue $dirAvailableIPs
+                #Overall WorkSpaces
+                $DeployedRegionsTemp | Add-Member -NotePropertyName "quotaWks" -NotePropertyValue (Get-SQServiceQuota -ServiceCode workspaces -QuotaCode "L-34278094" -Region $region)
+                #StandBy WorkSpaces
+                try{
+                    $DeployedRegionsTemp | Add-Member -NotePropertyName "quotaStandby" -NotePropertyValue (Get-SQServiceQuota -ServiceCode workspaces -QuotaCode "L-9A67B5CB" -Region $region)
+                }catch{
+                    $DeployedRegionsTemp | Add-Member -NotePropertyName "quotaStandby" -NotePropertyValue "n/a"
+                }
+                #Graphics WorkSpaces
+                try{
+                    $DeployedRegionsTemp | Add-Member -NotePropertyName "quotaG" -NotePropertyValue (Get-SQServiceQuota -ServiceCode workspaces -QuotaCode "L-84611756" -Region $region )
+                }catch{
+                    $DeployedRegionsTemp | Add-Member -NotePropertyName "quotaG" -NotePropertyValue "n/a"
+                }
+                #GraphicsPro WorkSpaces
+                try{
+                    $DeployedRegionsTemp | Add-Member -NotePropertyName "quotaGPro" -NotePropertyValue (Get-SQServiceQuota -ServiceCode workspaces -QuotaCode "L-254B485B" -Region $region)
+                }catch{
+                    $DeployedRegionsTemp | Add-Member -NotePropertyName "quotaGPro" -NotePropertyValue "n/a"
+                }
+                #Graphics.g4dn WorkSpaces
+                $DeployedRegionsTemp | Add-Member -NotePropertyName "quotaG4dn" -NotePropertyValue (Get-SQServiceQuota -ServiceCode workspaces -QuotaCode "L-BCACAEBC" -Region $region)
+                #Graphics.g4dn WorkSpaces Pro
+                $DeployedRegionsTemp | Add-Member -NotePropertyName "quotaG4dnPro" -NotePropertyValue (Get-SQServiceQuota -ServiceCode workspaces -QuotaCode "L-BE9A8466" -Region $region)
+                $DeployedRegions += $DeployedRegionsTemp
+            }
+        }
+    }
+
+    return $DeployedRegions
+}
+
+function Get-AllBundles(){
+    param(
+        $Region,
+        $Custom
+    )
+    if($custom -eq $true){
+        $Bundles = Get-WKSWorkspaceBundle -Region $Region
+        $Bundles += Get-WKSWorkspaceBundle -Region $Region -Owner 'AMAZON'
+    }else{
+        $Bundles = Get-WKSWorkspaceBundle -Region $Region -Owner 'AMAZON'
+    }
+    return $Bundles
 }
 
 function Update-RunningMode(){
@@ -147,6 +214,7 @@ function Invoke-RemoteAssist{
     param(
         [String]$privateIP
     )
+
     $parameters="/offerRA " +$privateIP
     $exe="msra.exe"
     start-process $exe $parameters -Wait
@@ -460,124 +528,97 @@ function Get-CloudWatchImagesServiceMetrics(){
         [String]$region,
         [String]$CWRun
     )
-    #Do a background job so that way the GUI loads
-    $global:generateCloudWatchImagesJob =Start-Job -scriptBlock{
-        param(
-            [String]$path,
-            [String]$WSId,
-            [String]$AWSProfile,
-            [String]$region,
-            [String]$CWRun
-        )  
-        if($AWSProfile -ne $false){
-            Set-AWSCredential -AccessKey $AWSProfile.GetCredentials().AccessKey -SecretKey $AWSProfile.GetCredentials().SecretKey
-        }
+    $path=$workingDirectory
         
-        #Latency Average last 6 Weeks
-        $json = Get-Content ($path+"WorkSpaceHistoricalLatencyTemplate.json") -Raw
-        $jsonobj = $json | ConvertFrom-Json
-        $data = @("AWS/WorkSpaces","InSessionLatency","WorkspaceId",$WSId)
-        $jsonobj.metrics[0]=$data
-        $jsonobj = $jsonobj | ConvertTo-Json -depth 6
-        set-content -Path  ($path+"WorkSpaceHistoricalLatency.json") -Value $jsonobj
-        $JsonFile = Get-Content -Raw -Path ($path+"WorkSpaceHistoricalLatency.json")
-        $image= get-CWMetricWidgetImage -MetricWidget $JsonFile -Region $region
-        [byte[]]$bytes = $image.ToArray()
-        Set-Content -Path ($path+"SelectedWSMetrics\WorkSpaceHistoricalLatency"+$CWRun+".png") -Value $bytes -Encoding Byte
+    #Latency Average last 24 Hours
+    $json = Get-Content ($path+"WorkSpacesHistoricalLatencyTemplate.json") -Raw
+    $jsonobj = $json | ConvertFrom-Json
+    $data = @("AWS/WorkSpaces","InSessionLatency","WorkspaceId",$WSId)
+    $jsonobj.metrics[0]=$data
+    $jsonobj = $jsonobj | ConvertTo-Json -depth 6
+    set-content -Path  ($path+"WorkSpacesHistoricalLatency.json") -Value $jsonobj
+    $JsonFile = Get-Content -Raw -Path ($path+"WorkSpacesHistoricalLatency.json")
+    $image= get-CWMetricWidgetImage -MetricWidget $JsonFile -Region $region
+    [byte[]]$bytes = $image.ToArray()
+    Set-Content -Path ($path+"SelectedWSMetrics\WorkSpacesHistoricalLatency"+$CWRun+".png") -Value $bytes -Encoding Byte
 
-        #Latency Average 
-        $json = Get-Content ($path+"\WorkSpaceLatencyTemplate.json") -Raw
-        $jsonobj = $json | ConvertFrom-Json
-        $data = @("AWS/WorkSpaces","InSessionLatency","WorkspaceId",$WSId)
-        $jsonobj.metrics[0]=$data
-        $jsonobj = $jsonobj | ConvertTo-Json -depth 6
-        set-content -Path  ($path+"\WorkSpaceLatency.json") -Value $jsonobj
-        $JsonFile = Get-Content -Raw -Path ($path+"\WorkSpaceLatency.json")
-        $image= get-CWMetricWidgetImage -MetricWidget $JsonFile -Region $region
-        [byte[]]$bytes = $image.ToArray()
-        Set-Content -Path ($path+"SelectedWSMetrics\WorkSpaceLatency"+$CWRun+".png") -Value $bytes -Encoding Byte
+    #Now UDP Packet Loss
+    $json = Get-Content ($path+"\WorkSpacesUDPTemplate.json") -Raw
+    $jsonobj = $json | ConvertFrom-Json
+    $data = @("AWS/WorkSpaces","WorkSpacesUDPPacketLossRate","WorkspaceId",$WSId)
+    $jsonobj.metrics[0]=$data
+    $jsonobj = $jsonobj | ConvertTo-Json -depth 6
+    set-content -Path  ($path+"\WorkSpacesUDP.json") -Value $jsonobj
+    $JsonFile = Get-Content -Raw -Path ($path+"\WorkSpacesUDP.json")
+    $image= get-CWMetricWidgetImage -MetricWidget $JsonFile -Region $region
+    [byte[]]$bytes = $image.ToArray()
+    Set-Content -Path ($path+"SelectedWSMetrics\WorkSpacesUDP"+$CWRun+".png") -Value $bytes -Encoding Byte
 
-        #Session Launch 
-        $json = Get-Content ($path+"\WorkSpacesSessionLaunchTemplate.json") -Raw
-        $jsonobj = $json | ConvertFrom-Json
-        $data = @("AWS/WorkSpaces","SessionLaunchTime","WorkspaceId",$WSId)
-        $jsonobj.metrics[0]=$data
-        $jsonobj = $jsonobj | ConvertTo-Json -depth 6
-        set-content -Path  ($path+"\WorkSpacesSessionLaunch.json") -Value $jsonobj
-        $JsonFile = Get-Content -Raw -Path ($path+"\WorkSpacesSessionLaunch.json") 
-        $image= get-CWMetricWidgetImage -MetricWidget $JsonFile -Region $region
-        [byte[]]$bytes = $image.ToArray()
-        Set-Content -Path ($path+"SelectedWSMetrics\WorkSpacesSessionLaunch"+$CWRun+".png") -Value $bytes -Encoding Byte
+    #Connection Summary
+    $json = Get-Content ($path+"\WorkSpacesConnectionSummaryTemplate.json") -Raw
+    $jsonobj = $json | ConvertFrom-Json
+    $data = @("AWS/WorkSpaces","ConnectionSuccess","WorkspaceId",$WSId)
+    $jsonobj.metrics[0]=$data
+    $jsonobj = $jsonobj | ConvertTo-Json -depth 6
+    set-content -Path  ($path+"\WorkSpacesConnectionSummary.json") -Value $jsonobj
+    $JsonFile = Get-Content -Raw -Path ($path+"\WorkSpacesConnectionSummary.json") 
+    $image= get-CWMetricWidgetImage -MetricWidget $JsonFile -Region $region
+    [byte[]]$bytes = $image.ToArray()
+    Set-Content -Path ($path+"SelectedWSMetrics\WorkSpacesConnectionSummary"+$CWRun+".png") -Value $bytes -Encoding Byte
 
-        $global:CloudWatchImageProcessComplete=$true
+    $global:CloudWatchImageProcessComplete=$true
     
-    }-ArgumentList $workingDirectory, $WSId, $AWSProfile, $region,$CWRun
 }
     
 function Get-CloudWatchImagesWorkSpaceMetrics(){
     # This function will generate dashboard images for your metrics portal. It targets the additional metrics for WorkSpaces through CloudWatch Agent.  
     param(
-        $workingDirectory,
-        $ComputerName,
-        $AWSProfile,
-        $region,
-        $CWRun
-    )    
-        
-    #Do a background job so that way the GUI loads
-    $global:generateCloudWatchImagesJobWS =Start-Job -scriptBlock{
-        param(
-            $path,
-            $AWSProfile,
-            $ComputerName,
-            $region,
-            $CWRun
-        )  
+        [String]$workingDirectory,
+        [String]$WSId,
+        [String]$AWSProfile,
+        [String]$region,
+        [String]$CWRun
+    )     
 
-        #Needed otherwise Job Fails
-        if($AWSProfile -ne $false){
-            Set-AWSCredential -AccessKey $AWSProfile.GetCredentials().AccessKey -SecretKey $AWSProfile.GetCredentials().SecretKey
-        }
-        
-        #Process to get the CPU PNG File
-        $json = Get-Content ($path+"\WorkSpacesCPUTemplate.json") -Raw
-        $jsonobj = $json | ConvertFrom-Json
-        $data = @("CWAgent", "Processor % Processor Time", "instance", "0", "host", $ComputerName, "objectname", "Processor")
-        $jsonobj.metrics[0]=$data
-        $jsonobj = $jsonobj | ConvertTo-Json -depth 6
-        set-content -Path  ($path+"\WorkSpacesCPU.json") -Value $jsonobj
-        $JsonFile = Get-Content -Raw -Path ($path+"\WorkSpacesCPU.json")
-        $image= get-CWMetricWidgetImage -MetricWidget $JsonFile -Region $region
-        [byte[]]$bytes = $image.ToArray()
-        Set-Content -Path ($path+"\SelectedWSMetrics\WorkSpacesCPU"+$CWRun+".png") -Value $bytes -Encoding Byte
+    $path=$workingDirectory
+    #Process to get the CPU PNG File
+    $json = Get-Content ($path+"\WorkSpacesCPUTemplate.json") -Raw
+    $jsonobj = $json | ConvertFrom-Json
+    $data = @("AWS/WorkSpaces","CPUUsage","WorkspaceId",$WSId)
+    $jsonobj.metrics[0]=$data
+    $jsonobj = $jsonobj | ConvertTo-Json -depth 6
+    set-content -Path  ($path+"\WorkSpacesCPU.json") -Value $jsonobj
+    $JsonFile = Get-Content -Raw -Path ($path+"\WorkSpacesCPU.json")
+    $image= get-CWMetricWidgetImage -MetricWidget $JsonFile -Region $region
+    [byte[]]$bytes = $image.ToArray()
+    Set-Content -Path ($path+"\SelectedWSMetrics\WorkSpacesCPU"+$CWRun+".png") -Value $bytes -Encoding Byte
 
-        #Disk
-        $json = Get-Content ($path+"\WorkSpacesDiskTemplate.json") -Raw
-        $jsonobj = $json | ConvertFrom-Json
-        $data = @("CWAgent", "LogicalDisk % Free Space", "instance", "D:", "host", $ComputerName, "objectname", "LogicalDisk" )
-        $jsonobj.metrics[0]=$data
-        $jsonobj = $jsonobj | ConvertTo-Json -depth 6
-        set-content -Path  ($path+"\WorkSpacesDisk.json") -Value $jsonobj
-        $JsonFile = Get-Content -Raw -Path ($path+"\WorkSpacesDisk.json")
-        $image= get-CWMetricWidgetImage -MetricWidget $JsonFile -Region $region
-        [byte[]]$bytes = $image.ToArray()
-        Set-Content -Path ($path+"\SelectedWSMetrics\WorkSpacesDisk"+$CWRun+".png") -Value $bytes -Encoding Byte
+    #Disk
+    $json = Get-Content ($path+"\WorkSpacesDiskTemplate.json") -Raw
+    $jsonobj = $json | ConvertFrom-Json
+    $data = @("AWS/WorkSpaces","RootVolumeDiskUsage","WorkspaceId",$WSId)
+    $jsonobj.metrics[0]=$data
+    $jsonobj = $jsonobj | ConvertTo-Json -depth 6
+    set-content -Path  ($path+"\WorkSpacesDisk.json") -Value $jsonobj
+    $JsonFile = Get-Content -Raw -Path ($path+"\WorkSpacesDisk.json")
+    $image= get-CWMetricWidgetImage -MetricWidget $JsonFile -Region $region
+    [byte[]]$bytes = $image.ToArray()
+    Set-Content -Path ($path+"\SelectedWSMetrics\WorkSpacesDisk"+$CWRun+".png") -Value $bytes -Encoding Byte
 
-        #Memory
-        $json = Get-Content ($path+"\WorkSpacesMemoryTemplate.json") -Raw
-        $jsonobj = $json | ConvertFrom-Json
-        $data = @("CWAgent", "Memory % Committed Bytes In Use", "host", $ComputerName, "objectname", "Memory" )
-        $jsonobj.metrics[0]=$data
-        $jsonobj = $jsonobj | ConvertTo-Json -depth 6
-        set-content -Path  ($path+"\WorkSpacesMemory.json") -Value $jsonobj
-        $JsonFile = Get-Content -Raw -Path ($path+"\WorkSpacesMemory.json")
-        $image= get-CWMetricWidgetImage -MetricWidget $JsonFile -Region $region
-        [byte[]]$bytes = $image.ToArray()
-        Set-Content -Path ($path+"\SelectedWSMetrics\WorkSpacesMemory"+$CWRun+".png") -Value $bytes -Encoding Byte
+    #Memory
+    $json = Get-Content ($path+"\WorkSpacesMemoryTemplate.json") -Raw
+    $jsonobj = $json | ConvertFrom-Json
+    $data = @("AWS/WorkSpaces","MemoryUsage","WorkspaceId",$WSId)
+    $jsonobj.metrics[0]=$data
+    $jsonobj = $jsonobj | ConvertTo-Json -depth 6
+    set-content -Path  ($path+"\WorkSpacesMemory.json") -Value $jsonobj
+    $JsonFile = Get-Content -Raw -Path ($path+"\WorkSpacesMemory.json")
+    $image= get-CWMetricWidgetImage -MetricWidget $JsonFile -Region $region
+    [byte[]]$bytes = $image.ToArray()
+    Set-Content -Path ($path+"\SelectedWSMetrics\WorkSpacesMemory"+$CWRun+".png") -Value $bytes -Encoding Byte
 
-        $global:CloudWatchImageProcessCompleteWSMetrics=$true
-        
-    }-ArgumentList $workingDirectory, $AWSProfile, $ComputerName, $region, $CWRun
+    $global:CloudWatchImageProcessCompleteWSMetrics=$true
+
 }
     
 function Get-CloudWatchStats(){
@@ -590,108 +631,90 @@ function Get-CloudWatchStats(){
         [String]$AccessLogsRegion,
         [String]$CloudTrailRegion,
         [String]$CWRun
-    )    
+    )
 
-        $global:getCloudWatchMetricsJob =Start-Job -scriptBlock{
-            param(
-            [String]$workingDirectory,
-            [String]$WorkSpaceAccessLogs,
-            [String]$CloudTrailLogs,
-            [String]$WorkSpaceId,
-            [String]$AccessLogsRegion,
-            [String]$CloudTrailRegion,
-            [String]$CWRun
-            )    
-            #Required for AppStream Role
-            if($AWSProfile -ne $false){
-                Set-AWSCredential -AccessKey $AWSProfile.GetCredentials().AccessKey -SecretKey $AWSProfile.GetCredentials().SecretKey
-            }
-            #Query Logins for the User
-            $Startdate = (New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date)).TotalSeconds
-            $Startdate = $Startdate - 604800
-            $Enddate = Get-Date
-            $Enddate=$Enddate.ToUniversalTime()
-            $Enddate = (New-TimeSpan -Start (Get-Date "01/01/1970") -End ($Enddate)).TotalSeconds
+    #Query Logins for the User
+    $Startdate = (New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date)).TotalSeconds
+    $Startdate = $Startdate - 604800
+    $Enddate = Get-Date
+    $Enddate=$Enddate.ToUniversalTime()
+    $Enddate = (New-TimeSpan -Start (Get-Date "01/01/1970") -End ($Enddate)).TotalSeconds
 
-            #Initiate Query if Access Logs are configured
-            if ($WorkSpaceAccessLogs -ne ""){
-                $queryString=('fields @message |filter detail.workspaceId="'+$WorkSpaceId+'"') 
-                $queryResultUserAccess=Start-CWLQuery -QueryString $queryString  -LogGroupName $WorkSpaceAccessLogs -StartTime $Startdate -EndTime $Enddate -Region $AccessLogsRegion
-                $queryResultUserAccessComplete=$false
-            }
-            else{
-                $queryResultUserAccessComplete = $true
-                
-            }
-            # Initiate Query if CloudTrail logs are configured
-            if ($CloudTrailLogs -ne ""){
-                $queryString=('fields @message |filter eventName="ModifyWorkspaceProperties" |filter requestParameters.workspaceId="'+$WorkSpaceId+'"') 
-                $queryResultWorkSpaceChanges=Start-CWLQuery -QueryString ('fields @message |filter eventName="ModifyWorkspaceProperties"  |filter requestParameters.workspaceId="'+$WorkSpaceId+'"') -LogGroupName $CloudTrailLogs -StartTime $Startdate -EndTime $Enddate -Region $CloudTrailRegion
-                $queryResultCloudTrailComplete = $false
-            }
-            else{
-                $queryResultCloudTrailComplete = $true
-                
-            }
-
-            # Wait for the WorkSpace Access query to complete
-            while ($queryResultUserAccessComplete -eq $false){
-                foreach ($completeQuerry in $queryStatus){
-                    if ($completeQuerry.QueryId -eq $queryResultUserAccess){
-                        $queryResultUserAccessComplete = $true
-                        # Loop through the records and output to a CSV
-                        $loadResults=Get-CWLQueryResult -QueryId $queryResultUserAccess -Region $AccessLogsRegion
-                        $x=0
-                        $OutputObj = @()
-                        while ($x-lt $loadResults.Statistics.RecordsMatched){
-                            $userAccessLog = $loadResults.Results[$x][0].Value | ConvertFrom-Json
-                            $NewObj = New-Object -TypeName PSobject
-                            $NewObj | Add-Member -NotePropertyName "Time" -NotePropertyValue $userAccessLog.time
-                            $NewObj | Add-Member -NotePropertyName "ClientVersion" -NotePropertyValue $userAccessLog.detail.clientVersion
-                            $NewObj | Add-Member -NotePropertyName "IP" -NotePropertyValue $userAccessLog.detail.clientIpAddress
-                            $NewObj | Add-Member -NotePropertyName "Platform" -NotePropertyValue $userAccessLog.detail.clientPlatform
-                            $OutputObj += $NewObj
-                            $x=$x+1
-                        }
-                        # Now load the object into a CSV to load into the Form
-                        $OutputObj | Export-Csv -Path ($workingDirectory+"\SelectedWSMetrics\ConnectionHistory"+$CWRun+".csv") -NoTypeInformation
-                    }
-                }
-                sleep -Seconds 1
-                $queryStatus =Get-CWLQuery -Status Complete -Region $AccessLogsRegion
-            }
-
+    #Initiate Query if Access Logs are configured
+    if ($WorkSpaceAccessLogs -ne ""){
+        $queryString=('fields @message |filter detail.workspaceId="'+$WorkSpaceId+'"') 
+        $queryResultUserAccess=Start-CWLQuery -QueryString $queryString  -LogGroupName $WorkSpaceAccessLogs -StartTime $Startdate -EndTime $Enddate -Region $AccessLogsRegion
+        $queryResultUserAccessComplete=$false
+        $queryString=('fields @message |filter `detail.eventName`="ModifyWorkspaceProperties" |filter `detail.requestParameters.workspaceId`="'+$WorkSpaceId+'"') 
+        $queryResultWorkSpaceChanges=Start-CWLQuery -QueryString ('fields @message |filter `detail.eventName`="ModifyWorkspaceProperties"  |filter `detail.requestParameters.workspaceId`="'+$WorkSpaceId+'"') -LogGroupName $WorkSpaceAccessLogs -StartTime $Startdate -EndTime $Enddate -Region $AccessLogsRegion
+        $queryResultCloudTrailComplete = $false
+    }
+    else{
+        $queryResultUserAccessComplete = $true
+        $queryResultCloudTrailComplete = $true
         
-            $queryStatus =Get-CWLQuery -Status Complete -Region $CloudTrailRegion
-            # Wait for the CloudTrail query to complete
-            while ($queryResultCloudTrailComplete -eq $false){
-                foreach ($completeQuerry in $queryStatus){
-                    if ($completeQuerry.QueryId -eq $queryResultWorkSpaceChanges){
-                        $queryResultCloudTrailComplete = $true
-                        $x=0
-                        $OutputObj = @()
-                        $loadResults=Get-CWLQueryResult -QueryId $queryResultWorkSpaceChanges -Region $CloudTrailRegion
-                        while ($x-lt $loadResults.Statistics.RecordsMatched){
-                            $CloudTrailLog = $loadResults.Results[$x][0].Value | ConvertFrom-Json
-                            $NewObj = New-Object -TypeName PSobject
-                            $NewObj | Add-Member -NotePropertyName "Time" -NotePropertyValue $CloudTrailLog.eventTime
-                            $NewObj | Add-Member -NotePropertyName "Region" -NotePropertyValue $CloudTrailLog.awsRegion
-                            $NewObj | Add-Member -NotePropertyName "WorkSpaceId" -NotePropertyValue $CloudTrailLog.requestParameters.workspaceId
-                            $NewObj | Add-Member -NotePropertyName "ComputeType" -NotePropertyValue $CloudTrailLog.requestParameters.workspaceProperties.computeTypeName
-                            $NewObj | Add-Member -NotePropertyName "RunningMode" -NotePropertyValue $CloudTrailLog.requestParameters.workspaceProperties.runningMode
-                            $NewObj | Add-Member -NotePropertyName "UserVolume" -NotePropertyValue $CloudTrailLog.requestParameters.workspaceProperties.userVolumeSizeGib
-                            $NewObj | Add-Member -NotePropertyName "RootVolume" -NotePropertyValue $CloudTrailLog.requestParameters.workspaceProperties.rootVolumeSizeGib
-                            $OutputObj += $NewObj
-                            $x=$x+1
-                        }
-                        # Now load the object into a CSV to load into the Form
-                        $OutputObj | Export-Csv -Path ($workingDirectory+"\SelectedWSMetrics\UserChanges"+$CWRun+".csv") -NoTypeInformation
-            
-                    }
-                }
-                sleep -Seconds 1
-                $queryStatus =Get-CWLQuery -Status Complete -Region $CloudTrailRegion
-            }
+    }
 
-        }-ArgumentList $workingDirectory, $WorkSpaceAccessLogs, $CloudTrailLogs, $WorkSpaceId, $AccessLogsRegion, $CloudTrailRegion, $CWRun
+    # Wait for the WorkSpace Access query to complete
+    while ($queryResultUserAccessComplete -eq $false){
+        foreach ($completeQuerry in $queryStatus){
+            if ($completeQuerry.QueryId -eq $queryResultUserAccess){
+                $queryResultUserAccessComplete = $true
+                # Loop through the records and output to a CSV
+                $loadResults=Get-CWLQueryResult -QueryId $queryResultUserAccess -Region $AccessLogsRegion
+                $x=0
+                $OutputObj = @()
+                while ($x-lt $loadResults.Statistics.RecordsMatched){
+                    $userAccessLog = $loadResults.Results[$x][0].Value | ConvertFrom-Json
+                    $NewObj = New-Object -TypeName PSobject
+                    $NewObj | Add-Member -NotePropertyName "Time" -NotePropertyValue $userAccessLog.time
+                    $NewObj | Add-Member -NotePropertyName "ClientVersion" -NotePropertyValue $userAccessLog.detail.clientVersion
+                    $NewObj | Add-Member -NotePropertyName "IP" -NotePropertyValue $userAccessLog.detail.clientIpAddress
+                    $NewObj | Add-Member -NotePropertyName "Platform" -NotePropertyValue $userAccessLog.detail.clientPlatform
+                    $OutputObj += $NewObj
+                    $x=$x+1
+                }
+                # Now load the object into a CSV to load into the Form
+                $OutputObj | Export-Csv -Path ($workingDirectory+"\SelectedWSMetrics\ConnectionHistory"+$CWRun+".csv") -NoTypeInformation
+            }
+        }
+        sleep -Seconds 1
+        $queryStatus =Get-CWLQuery -Status Complete -Region $AccessLogsRegion
+    }
+
+    
+    $queryStatus =Get-CWLQuery -Status Complete -Region $AccessLogsRegion
+    # Wait for the CloudTrail query to complete
+    $queryString=('fields @message |filter `detail.eventName`="ModifyWorkspaceProperties" |filter `detail.requestParameters.workspaceId`="'+$WorkSpaceId+'"') 
+    $queryResultWorkSpaceChanges=Start-CWLQuery -QueryString ('fields @message |filter `detail.eventName`="ModifyWorkspaceProperties"  |filter `detail.requestParameters.workspaceId`="'+$WorkSpaceId+'"') -LogGroupName $WorkSpaceAccessLogs -StartTime $Startdate -EndTime $Enddate -Region $AccessLogsRegion
+    $queryResultCloudTrailComplete = $false
+    while ($queryResultCloudTrailComplete -eq $false){
+        foreach ($completeQuerry in $queryStatus){
+            if ($completeQuerry.QueryId -eq $queryResultWorkSpaceChanges){
+                $queryResultCloudTrailComplete = $true
+                $x=0
+                $OutputObj = @()
+                $loadResults=Get-CWLQueryResult -QueryId $queryResultWorkSpaceChanges -Region $AccessLogsRegion
+                while ($x-lt $loadResults.Statistics.RecordsMatched){
+                    $CloudTrailLog = $loadResults.Results[$x][0].Value | ConvertFrom-Json
+                    write-host $CloudTrailLog.detail.requestParameters
+                    $NewObj = New-Object -TypeName PSobject
+                    $NewObj | Add-Member -NotePropertyName "Time" -NotePropertyValue $CloudTrailLog.detail.eventTime
+                    $NewObj | Add-Member -NotePropertyName "Region" -NotePropertyValue $CloudTrailLog.detail.awsRegion
+                    $NewObj | Add-Member -NotePropertyName "WorkSpaceId" -NotePropertyValue $CloudTrailLog.detail.requestParameters.workspaceId
+                    $NewObj | Add-Member -NotePropertyName "ComputeType" -NotePropertyValue $CloudTrailLog.detail.requestParameters.workspaceProperties.computeTypeName
+                    $NewObj | Add-Member -NotePropertyName "RunningMode" -NotePropertyValue $CloudTrailLog.detail.requestParameters.workspaceProperties.runningMode
+                    $NewObj | Add-Member -NotePropertyName "UserVolume" -NotePropertyValue $CloudTrailLog.detail.requestParameters.workspaceProperties.userVolumeSizeGib
+                    $NewObj | Add-Member -NotePropertyName "RootVolume" -NotePropertyValue $CloudTrailLog.detail.requestParameters.workspaceProperties.rootVolumeSizeGib
+                    $OutputObj += $NewObj
+                    $x=$x+1
+                }
+                # Now load the object into a CSV to load into the Form
+                $OutputObj | Export-Csv -Path ($workingDirectory+"\SelectedWSMetrics\UserChanges"+$CWRun+".csv") -NoTypeInformation
+    
+            }
+        }
+        sleep -Seconds 1
+        $queryStatus =Get-CWLQuery -Status Complete -Region $AccessLogsRegion
+    }
 }  

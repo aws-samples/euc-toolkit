@@ -2,11 +2,10 @@
     "view": "timeSeries",
     "stacked": false,
     "metrics": [
-        [ "AWS/WorkSpaces", "CPUUsage", "WorkspaceId", "ws-123456"]
+        [ "AWS/WorkSpaces", "UDPPacketLossRate", "WorkspaceId", "ws-123456"]
     ],
-    "region": "us-east-1",
     "period": 300,
-    "title": "CPU 24 hours",
+    "title": "UDP Packet Loss over the past 24 Hours",
     "width": 500,
     "height": 200,
     "start": "-PT24H",

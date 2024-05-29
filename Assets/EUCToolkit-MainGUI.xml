@@ -174,7 +174,10 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
                     <Label Name="lblBulkPCOIP" Content="PCOIP WorkSpaces:" HorizontalAlignment="Left" Height="25" Margin="21,185,0,0" VerticalAlignment="Top" Width="156" HorizontalContentAlignment="Center" Grid.Column="3"/>           
                     <Label Name="lblBulkBYOPCounter" Content="X" HorizontalAlignment="Left" Height="25" Margin="182,205,0,0" VerticalAlignment="Top" Width="96" HorizontalContentAlignment="Center" RenderTransformOrigin="0.502,1.015" Grid.Column="3"/>
                     <Label Name="lblBulkBYOP" Content="BYOP WorkSpaces:" HorizontalAlignment="Left" Height="25" Margin="21,205,0,0" VerticalAlignment="Top" Width="156" HorizontalContentAlignment="Center" Grid.Column="3"/>
+																																																														 
+																																																							 
                 </Grid>
+
             </TabItem>
 
             <TabItem Header="AppStream - HelpDesk">
@@ -240,11 +243,9 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
                     <Label Name="lblReporting" Content="Path for Reporting" HorizontalAlignment="Left" Height="27" Margin="400,176,0,0" VerticalAlignment="Top" Width="156" Grid.Column="1"/>
                     <TextBox Name="txtReporting" HorizontalAlignment="Left" Height="22" Margin="587,181,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="291" Grid.Column="1" Grid.ColumnSpan="2"/>
                     <Label Name="lblCWLogs" Content="CloudWatch Access Logs (ARN)" HorizontalAlignment="Left" Height="27" Margin="400,208,0,0" VerticalAlignment="Top" Width="181" Grid.Column="1"/>
-                    <Label Name="lblCTLogs" Content="CloudTrail Logs (ARN)" HorizontalAlignment="Left" Height="27" Margin="400,240,0,0" VerticalAlignment="Top" Width="156" Grid.Column="1"/>
+
                     <TextBox Name="txtCloudWatchAccessLogs" HorizontalAlignment="Left" Height="22" Margin="587,213,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="291" Grid.Column="1" Grid.ColumnSpan="2"/>
-                    <TextBox Name="txtCloudTrailLogs" HorizontalAlignment="Left" Height="22" Margin="586,245,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="291" Grid.Column="1" Grid.ColumnSpan="2"/>
-                    <Label Name="lblCWAgentInstall" Content="Cloud Watch Agent Configured?" HorizontalAlignment="Left" Height="27" Margin="400,279,0,0" VerticalAlignment="Top" Width="181" Grid.Column="1"/>
-                    <ComboBox Name="cmboCWAgentInstall" Grid.Column="1" HorizontalAlignment="Left" Height="21" Margin="586,280,0,0" VerticalAlignment="Top" Width="292" Grid.ColumnSpan="2"/>
+
                     <TextBox Name="txtDisk2VHDPath" HorizontalAlignment="Left" Height="22" Margin="76,279,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="291" Grid.Column="1"/>
                     <Label Name="lblDisk2VHDPath" Content="Path to Disk2VHD" HorizontalAlignment="Left" Height="27" Margin="20,274,0,0" VerticalAlignment="Top" Width="156" Grid.ColumnSpan="2"/>
                     <Label Name="lblActivePermissions" Grid.ColumnSpan="2" Content="Active Permissions" FontWeight="Bold" HorizontalAlignment="Left" Height="30" Margin="22,48,0,0" VerticalAlignment="Top" Width="154"/>

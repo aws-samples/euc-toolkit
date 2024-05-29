@@ -2,13 +2,23 @@
     "view": "timeSeries",
     "stacked": false,
     "metrics": [
-        [ "CWAgent", "LogicalDisk % Free Space", "instance", "D:", "host", "WSAMZN-V5GUOTVF", "objectname", "LogicalDisk" ],
-        [ "...", "C:", ".", ".", ".", "." ]
+        [
+            "AWS/WorkSpaces",
+            "RootVolumeDiskUsage",
+            "WorkspaceId",
+            "ws-123456"
+        ],
+        [
+            ".",
+            "UserVolumeDiskUsage",
+            ".",
+            "."
+        ]
     ],
-    "period": 300,
-    "title": "Disk Utilization past Month",
+    "title": "Disk Usage past 24 hours",
     "width": 500,
     "height": 200,
-    "start": "-PT1008H",
-    "end": "P0D"
+    "start": "-PT24H",
+    "end": "P0D",
+    "period": 300
 }
