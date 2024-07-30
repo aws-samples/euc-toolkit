@@ -1218,14 +1218,14 @@ function Update-ServiceQuotas(){
     $lblAdminWSServiceQuotaCurrent.Content = (($global:WorkSpacesDB | Where-Object { ($_.Region -eq $cmboAdminSelectRegionValue.SelectedValue)}).count)
     $lblAdminWSServiceQuotaCurrentMax.Content = $targetDirectory.quotaWks
 
-    $lblAdminWSStandByServiceQuotaCurrent.Content = (($global:WorkSpacesDB | Where-Object { ($_.Region -eq $cmboAdminSelectRegionValue.SelectedValue)}).count)
+    $lblAdminWSStandByServiceQuotaCurrent.Content = "NA"
     $lblAdmintWSStandByServiceQuotaMax.Content = $targetDirectory.quotaStandby
 
     $lblAdminWSGraphicsServiceQuotaCurrent.Content = (($global:WorkSpacesDB | Where-Object { ($_.Region -eq $cmboAdminSelectRegionValue.SelectedValue)} | Where-Object {($_.WorkspaceProperties.ComputeTypeName).ToUpper -eq "GRAPHICS"}).count)
-    $lblAdminWSGraphicsServiceQuotaMax.Content = $targetDirectory.quotaG
+    $lblAdminWSGraphicsServiceQuotaMax.Content = $targetDirectory.quotaGraphics
 
     $lblAdminWSGraphicsProServiceQuotaCurrent.Content = (($global:WorkSpacesDB | Where-Object { ($_.Region -eq $cmboAdminSelectRegionValue.SelectedValue)} | Where-Object {($_.WorkspaceProperties.ComputeTypeName).ToUpper -eq "GRAPHICSPRO"}).count)
-    $lblAdminWSGraphicsProServiceQuotaMax.Content = $targetDirectory.quotaGPro
+    $lblAdminWSGraphicsProServiceQuotaMax.Content = $targetDirectory.quotaGraphicsPro
 
     $lblAdminWSGraphicsg4dnServiceQuotaCurrent.Content = (($global:WorkSpacesDB | Where-Object { ($_.Region -eq $cmboAdminSelectRegionValue.SelectedValue)} | Where-Object {($_.WorkspaceProperties.ComputeTypeName).ToUpper -eq "GRAPHICS.G4DN"}).count)
     $lblAdminWSGraphicsg4dnProServiceQuotaMax.Content = $targetDirectory.quotaG4dn
