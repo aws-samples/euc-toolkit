@@ -1218,7 +1218,7 @@ function Update-ServiceQuotas(){
     $lblAdminWSServiceQuotaCurrent.Content = (($global:WorkSpacesDB | Where-Object { ($_.Region -eq $cmboAdminSelectRegionValue.SelectedValue)}).count)
     $lblAdminWSServiceQuotaCurrentMax.Content = $targetDirectory.quotaWks
 
-    $lblAdminWSStandByServiceQuotaCurrent.Content = "NA"
+    $lblAdminWSStandByServiceQuotaCurrent.Content = "N/A"
     $lblAdmintWSStandByServiceQuotaMax.Content = $targetDirectory.quotaStandby
 
     $lblAdminWSGraphicsServiceQuotaCurrent.Content = (($global:WorkSpacesDB | Where-Object { ($_.Region -eq $cmboAdminSelectRegionValue.SelectedValue)} | Where-Object {($_.WorkspaceProperties.ComputeTypeName).ToUpper -eq "GRAPHICS"}).count)
