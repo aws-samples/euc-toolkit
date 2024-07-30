@@ -179,7 +179,7 @@ function Update-Counter(){
     $stopped = ($global:WorkSpacesDB | Where-Object { $_.State -eq "STOPPED"}).Count
     $PCoIP = ($global:WorkSpacesDB | Where-Object { $_.Protocol -eq "PCOIP"}).Count
     $WSP = ($global:WorkSpacesDB | Where-Object { $_.Protocol -eq "WSP"}).Count
-	$BYOP = ($global:WorkSpacesDB | Where-Object { $_.Protocol -eq "BYOP"}).Count
+    $BYOP = ($global:WorkSpacesDB | Where-Object { $_.Protocol -eq "BYOP"}).Count
     if($total -eq 0 -or $NULL -eq $total){
         $total = 0
     }
@@ -203,7 +203,7 @@ function Update-Counter(){
     $TotalStopped_Count.content = $stopped
     $lblBulkPCOIPCounter.content = $PCoIP
     $lblBulkWSPCounter.content = $WSP
-	$lblBulkBYOPCounter.content = $BYOP
+    $lblBulkBYOPCounter.content = $BYOP
 }
 
 ###############################################
