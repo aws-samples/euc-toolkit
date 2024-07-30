@@ -76,6 +76,71 @@ Contains paths for reporting, logs collection, tools, and CloudWatch Log groups.
 
 Included in the EUC toolkit are several JSON files that are used to generate images from CloudWatch. These can be customized, see this [documentation](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-metric-streams-formats-json.html) for additional information.
 
+**AWS Identity and Access Management (IAM) permissions**
+
+You must have IAM permissions to call the service APIs. It is a best practice to follow the principle of least privilege. The following policy provides access to APIs needed by to the toolkit. If you do not plan to use the WorkSpaces CloudWatch functionality, you may remove WorkSpacesCloudWatchImages and WorkSpacesCloudWatchMetrics from the policy
+
+<a name="Required-permissions"></a>
+# Required permissions
+
+```
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "EUCToolkitWorkSpaceAccess",
+      "Action": [
+        "workspaces:DescribeWorkspaceBundles",
+        "workspaces:DescribeWorkspaceDirectories",
+        "workspaces:DescribeWorkspaceSnapshots",
+        "workspaces:DescribeWorkspaces",
+        "workspaces:MigrateWorkspace",
+        "workspaces:ModifyWorkspaceProperties",
+        "workspaces:ModifyWorkspaceState",
+        "workspaces:RebootWorkspaces",
+        "workspaces:RebuildWorkspaces",
+        "workspaces:RestoreWorkspace",
+        "workspaces:StartWorkspaces",
+        "workspaces:StopWorkspaces",
+        "workspaces:TerminateWorkspaces"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    },
+    {
+      "Sid": "EUCToolkitAppStream2Access",
+      "Action": [
+        "appstream:DescribeSessions",
+        "appstream:DescribeStacks",
+        "appstream:ExpireSession",
+        "appstream:ListAssociatedFleets"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    },
+    {
+      "Sid": "WorkSpacesCloudWatchImages",
+      "Action": [
+        "cloudwatch:GetMetricWidgetImage"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    },
+    {
+      "Sid": "WorkSpacesCloudWatchMetrics",
+      "Action": [
+        "logs:DescribeQueries",
+	"logs:DescribeLogGroups",
+        "logs:GetQueryResults",
+        "logs:StartQuery"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    }
+  ]
+}
+```
+
 <a name="file-structure"></a>
 # File structure
 

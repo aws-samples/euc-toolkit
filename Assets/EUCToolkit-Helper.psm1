@@ -24,13 +24,17 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     https://github.com/aws-samples/euc-toolkit
 #>
 
+# Current WorkSpaces Regions. See link below for current WorkSpaces availbility
+# https://docs.aws.amazon.com/workspaces/latest/adminguide/azs-workspaces.html
+
 
 function Get-LocalWorkSpacesDB(){
+    param(
+        $DeployedRegions
+    )
     # This function build a PSObject that contains all of your WorkSpaces information. The object will act as a local DB for the GUI.
     # If you need to have object persistence to save API calls, this function can be replaced with a function that calls your persistent store.
     $WorkSpacesDDB = @()
-    $DeployedRegions = Get-WksDirectories
-    
     # Finds all current WorkSpaces. If Actice Directory cannot be reached, those attributes are omitted.
     foreach($DeployedRegion in $DeployedRegions){
         $RegionalWks = Get-WKSWorkSpaces -Region $DeployedRegion.Region -DirectoryId $DeployedRegion.DirectoryId
@@ -88,13 +92,68 @@ function Get-LocalWorkSpacesDB(){
     return $WorkSpacesDDB
 }
 
+
+function Get-WksServiceQuotasDB(){
+    param(
+        $DeployedRegions
+    )
+    $WSServiceQuota = @()
+    foreach($WksRegion in $DeployedRegions){
+        $region = $WksRegion.Region
+        $DeployedRegionsTemp = New-Object -TypeName PSobject
+        $DeployedRegionsTemp | Add-Member -NotePropertyName "Region" -NotePropertyValue $region
+        # For more information on WorkSpaces Quotas, see https://docs.aws.amazon.com/workspaces/latest/adminguide/workspaces-limits.html.
+        #Total Regional WorkSpaces
+        try{
+            $TotalQuota = (Get-SQServiceQuota -ServiceCode workspaces -QuotaCode "L-34278094" -Region $region).Value
+        }catch{
+            $TotalQuota = "N/A"
+        }
+        $DeployedRegionsTemp | Add-Member -NotePropertyName "quotaWks" -NotePropertyValue $TotalQuota
+        # StandBy WorkSpaces
+        try{
+            $StandbyQuota = (Get-SQServiceQuota -ServiceCode workspaces -QuotaCode "L-9A67B5CB" -Region $region).Value
+        }catch{
+            $StandbyQuota = "N/A"
+        }
+        $DeployedRegionsTemp | Add-Member -NotePropertyName "quotaStandby" -NotePropertyValue $StandbyQuota
+        # Graphics WorkSpaces
+        try{
+            $GraphicsQuota = (Get-SQServiceQuota -ServiceCode workspaces -QuotaCode "L-84611756" -Region $region).Value
+        }catch{
+            $GraphicsQuota = "N/A"
+        }
+        $DeployedRegionsTemp | Add-Member -NotePropertyName "quotaGraphics" -NotePropertyValue $GraphicsQuota
+        # GraphicsPro WorkSpaces
+        try{
+            $GraphicsProQuota = (Get-SQServiceQuota -ServiceCode workspaces -QuotaCode "L-254B485B" -Region $region).Value
+        }catch{
+            $GraphicsProQuota = "N/A"
+        }
+        $DeployedRegionsTemp | Add-Member -NotePropertyName "quotaGraphicsPro" -NotePropertyValue $GraphicsProQuota
+        # Graphics.g4dn WorkSpaces
+        try{
+            $GraphicsG4Quota = (Get-SQServiceQuota -ServiceCode workspaces -QuotaCode "L-BCACAEBC" -Region $region).Value
+        }catch{
+            $GraphicsG4Quota = "N/A"
+        }
+        $DeployedRegionsTemp | Add-Member -NotePropertyName "quotaG4dn" -NotePropertyValue $GraphicsG4Quota
+        # Graphics.g4dn WorkSpaces Pro
+        try{
+            $GraphicsG4ProQuota = (Get-SQServiceQuota -ServiceCode workspaces -QuotaCode "L-BE9A8466" -Region $region).Value
+        }catch{
+            $GraphicsG4ProQuota = "N/A"
+        }
+        $DeployedRegionsTemp | Add-Member -NotePropertyName "quotaG4dnPro" -NotePropertyValue $GraphicsG4ProQuota
+
+        $WSServiceQuota += $DeployedRegionsTemp
+    }
+    return $WSServiceQuota
+}
+
 function Get-WksDirectories(){
-    $DeployedRegions = @()
-
-    # Current WorkSpaces Regions. See link below for current WorkSpaces availbility
-    # https://docs.aws.amazon.com/workspaces/latest/adminguide/azs-workspaces.html
     $regions = @('us-east-1','us-west-2', 'ap-south-1', 'ap-northeast-2', 'ap-southeast-1', 'ap-southeast-2', 'ap-northeast-1', 'ca-central-1', 'eu-central-1','eu-west-1', 'eu-west-2', 'sa-east-1')
-
+    $DeployedRegions = @()
     # Find regions that have WorkSpaces deployments
     foreach($region in $regions){
         $RegionsCall = Get-WKSWorkspaceDirectories -Region $region
@@ -114,30 +173,6 @@ function Get-WksDirectories(){
                 $subnetB = Get-EC2Subnet -SubnetId $WksRegion.SubnetIds[1] -Region $region
                 $dirAvailableIPs = $subnetA.AvailableIpAddressCount + $subnetB.AvailableIpAddressCount
                 $DeployedRegionsTemp | Add-Member -NotePropertyName "DirectoryAvailableIPs" -NotePropertyValue $dirAvailableIPs
-                #Overall WorkSpaces
-                $DeployedRegionsTemp | Add-Member -NotePropertyName "quotaWks" -NotePropertyValue (Get-SQServiceQuota -ServiceCode workspaces -QuotaCode "L-34278094" -Region $region)
-                #StandBy WorkSpaces
-                try{
-                    $DeployedRegionsTemp | Add-Member -NotePropertyName "quotaStandby" -NotePropertyValue (Get-SQServiceQuota -ServiceCode workspaces -QuotaCode "L-9A67B5CB" -Region $region)
-                }catch{
-                    $DeployedRegionsTemp | Add-Member -NotePropertyName "quotaStandby" -NotePropertyValue "n/a"
-                }
-                #Graphics WorkSpaces
-                try{
-                    $DeployedRegionsTemp | Add-Member -NotePropertyName "quotaG" -NotePropertyValue (Get-SQServiceQuota -ServiceCode workspaces -QuotaCode "L-84611756" -Region $region )
-                }catch{
-                    $DeployedRegionsTemp | Add-Member -NotePropertyName "quotaG" -NotePropertyValue "n/a"
-                }
-                #GraphicsPro WorkSpaces
-                try{
-                    $DeployedRegionsTemp | Add-Member -NotePropertyName "quotaGPro" -NotePropertyValue (Get-SQServiceQuota -ServiceCode workspaces -QuotaCode "L-254B485B" -Region $region)
-                }catch{
-                    $DeployedRegionsTemp | Add-Member -NotePropertyName "quotaGPro" -NotePropertyValue "n/a"
-                }
-                #Graphics.g4dn WorkSpaces
-                $DeployedRegionsTemp | Add-Member -NotePropertyName "quotaG4dn" -NotePropertyValue (Get-SQServiceQuota -ServiceCode workspaces -QuotaCode "L-BCACAEBC" -Region $region)
-                #Graphics.g4dn WorkSpaces Pro
-                $DeployedRegionsTemp | Add-Member -NotePropertyName "quotaG4dnPro" -NotePropertyValue (Get-SQServiceQuota -ServiceCode workspaces -QuotaCode "L-BE9A8466" -Region $region)
                 $DeployedRegions += $DeployedRegionsTemp
             }
         }
@@ -567,7 +602,6 @@ function Get-CloudWatchImagesServiceMetrics(){
     Set-Content -Path ($path+"SelectedWSMetrics\WorkSpacesConnectionSummary"+$CWRun+".png") -Value $bytes -Encoding Byte
 
     $global:CloudWatchImageProcessComplete=$true
-    
 }
     
 function Get-CloudWatchImagesWorkSpaceMetrics(){
@@ -618,7 +652,6 @@ function Get-CloudWatchImagesWorkSpaceMetrics(){
     Set-Content -Path ($path+"\SelectedWSMetrics\WorkSpacesMemory"+$CWRun+".png") -Value $bytes -Encoding Byte
 
     $global:CloudWatchImageProcessCompleteWSMetrics=$true
-
 }
     
 function Get-CloudWatchStats(){
