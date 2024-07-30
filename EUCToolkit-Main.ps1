@@ -24,7 +24,6 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     https://github.com/aws-samples/euc-toolkit
 #>
 Write-Host "Please wait while the EUC Toolkit Initializes"
-
 Write-Host "Importing helper module"
 $env:PSModulePath = "$env:PSModulePath;$($PSScriptRoot+"\Assets\EUCToolkit-Helper.psm1")"
 Import-Module -Name $($PSScriptRoot+"\Assets\EUCToolkit-Helper.psm1") -Force
