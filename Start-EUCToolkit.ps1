@@ -23,7 +23,10 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     to the EUCToolkit-Helper module. For more information, see the link below:
     https://github.com/aws-samples/euc-toolkit
 #>
+
 Write-Host "Please wait while the EUC Toolkit Initializes"
+Write-Host "Importing AWS Tools Modules"
+Import-Module AWS.Tools.Common,AWS.Tools.EC2,AWS.Tools.Workspaces,AWS.Tools.Appstream,AWS.Tools.Cloudwatch,AWS.Tools.CloudwatchLogs,AWS.Tools.ServiceQuotas
 Write-Host "Importing helper module"
 $env:PSModulePath = "$env:PSModulePath;$($PSScriptRoot+"\Assets\EUCToolkit-Helper.psm1")"
 Import-Module -Name $($PSScriptRoot+"\Assets\EUCToolkit-Helper.psm1") -Force
@@ -65,6 +68,8 @@ if(Get-AWSCredential){
         $lblPermissions.Content = "Undefined Profile (default)"
     }
 }
+
+#Install-AWSToolsModule AWS.Tools.Common,AWS.Tools.EC2,AWS.Tools.Workspaces,AWS.Tools.Appstream,AWS.Tools.Cloudwatch,AWS.Tools.CloudwatchLogs,AWS.Tools.ServiceQuotas -CleanUp -Force
  
 #############################
 # ! # ! # FUNCTIONS # ! # ! # 
@@ -73,11 +78,14 @@ if(Get-AWSCredential){
 # This function updates the PowerShell object that acts as the local db and the counter
 function Update-WorkSpaceObject(){
     write-host "Getting a list of regions and directories where WorkSpaces are deployed"
-    $global:WorkSpacesDirectoryDB = Get-WksDirectories
+    $global:WorkSpacesDirectoryDB = Get-WksDirectories -throttleControl $true
+    write-host "Getting a list of WorkSpaces deployed"
+    $global:WorkSpacesDB = Get-LocalWorkSpacesDB -DeployedRegions $global:WorkSpacesDirectoryDB  -throttleControl $true
+    write-host "Getting a list of WorkSpaces Bundles"
+    $deployedRegions = $global:WorkSpacesDB | Select-Object Region -Unique
+    $global:WorkSpacesBundles = Get-AllBundles -Custom $true -throttleControl $true -Regions $deployedRegions
     write-host "Getting WorkSpaces Service Quotas"
     $global:WorkSpacesServiceQuotaDB = Get-WksServiceQuotasDB -DeployedRegions $global:WorkSpacesDirectoryDB
-    write-host "Getting a list of WorkSpaces deployed"
-    $global:WorkSpacesDB = Get-LocalWorkSpacesDB -DeployedRegions $global:WorkSpacesDirectoryDB
     $date = (get-date -Format "MM/dd/yyyy HH:mm") | Out-String
     $lblLastDBUpdateBulk.Content = $date
     $lblLastDBUpdate.Content = $date
@@ -88,7 +96,7 @@ function Update-WorkSpaceObject(){
 # This function filters the local db object in real time so that your search criteria is immediately applied
 function Search-WorkSpaces(){
     $SearchResults.Items.Clear()
-    $filtered = $global:WorkSpacesDB
+    $filtered = $global:WorkSpacesDB | Select-Object WorkSpaceId,Region,UserName,FirstName,LastName,ComputerName,Email,Protocol
     if($FirstName.Text -ne ""){
         $filtered = $filtered | Where-Object { ($_.FirstName -like ($FirstName.Text + "*")) } | Select-Object WorkSpaceId,Region,UserName,FirstName,LastName,ComputerName,Email,Protocol
     }
@@ -96,7 +104,7 @@ function Search-WorkSpaces(){
         $filtered = $filtered | Where-Object { ($_.LastName -like ($LastName.Text + "*")) } | Select-Object WorkSpaceId,Region,UserName,FirstName,LastName,ComputerName,Email,Protocol
     }
     if($Email.Text -ne ""){
-        $filtered = $filtered | Where-Object { ($_.Email -like ("*"+$Email.Text + "*")) } | Select-Object WorkSpaceId,Region,UserName,FirstName,LastName,ComputerName,Email,Protocol 
+        $filtered = $filtered | Where-Object { ($_.Email -like ("*" + $Email.Text + "*")) } | Select-Object WorkSpaceId,Region,UserName,FirstName,LastName,ComputerName,Email,Protocol 
     }
     if($txtComputerName.Text -ne ""){
         $filtered = $filtered | Where-Object { ($_.ComputerName -like ("*" + $txtComputerName.Text + "*")) } | Select-Object WorkSpaceId,Region,UserName,FirstName,LastName,ComputerName,Email,Protocol
@@ -110,7 +118,7 @@ function Search-WorkSpaces(){
 
     foreach($workspace in $filtered){
         if($NULL -ne $workspace.WorkSpaceId){
-            $SilenceOutput=$SearchResults.items.Add($workspace)
+            $SearchResults.items.Add($workspace) | Out-Null
         }
     }
 }
@@ -135,22 +143,22 @@ function Get-ImpactedWS(){
         $selectWKSBundle.items.add("Select Bundle")
         $selectWKSBundle.SelectedIndex=0
     }
-    $allImpactedWS = $global:WorkSpacesDB | Where-Object { ($_.Region -eq $selectWKSRegion.SelectedItem)}
+    $allImpactedWS = $global:WorkSpacesDB | Where-Object { ($_.Region -eq $selectWKSRegion.SelectedItem)} | Select-Object directoryId, WorkSpaceId,UserName,Region,FirstName,LastName,ComputerName,Email,WorkspaceProperties,State,Protocol,BundleId
     if($bulkdirectoryId -like "All Directories"){
-        $allImpactedWS = $allImpactedWS | Select-Object directoryId, WorkSpaceId,UserName,Region,FirstName,LastName,ComputerName,Email,RunningMode,State,Protocol,BundleId
+        $allImpactedWS = $allImpactedWS
     }else{
-        $allImpactedWS = $allImpactedWS | Where-Object { ($_.directoryId -eq $bulkdirectoryId) }| Select-Object directoryId, WorkSpaceId,UserName,Region,FirstName,LastName,ComputerName,Email,RunningMode,State,Protocol,BundleId
+        $allImpactedWS = $allImpactedWS | Where-Object { ($_.directoryId -eq $bulkdirectoryId) }
     }
     if($selectRunningModeFilterCombo.SelectedItem -ne "Select Running Mode"){
-        $allImpactedWS = $allImpactedWS | Where-Object { ($_.RunningMode -like ($selectRunningModeFilterCombo.SelectedItem))} | Select-Object directoryId, WorkSpaceId,UserName,Region,FirstName,LastName,ComputerName,Email,RunningMode,State,Protocol,BundleId
+        $allImpactedWS = $allImpactedWS | Where-Object { ($_.WorkspaceProperties.RunningMode -like ($selectRunningModeFilterCombo.SelectedItem))} 
     }
     if($selectWKSBundle.SelectedItem -ne "Select Bundle"){
         $bundleSTR = ($selectWKSBundle.SelectedItem.split(" "))[0]
-        $allImpactedWS = $allImpactedWS | Where-Object { ($_.BundleId -like ($bundleSTR))} | Select-Object directoryId, WorkSpaceId,UserName,Region,FirstName,LastName,ComputerName,Email,RunningMode,State,Protocol,BundleId
+        $allImpactedWS = $allImpactedWS | Where-Object { ($_.BundleId -like ($bundleSTR))}
     }
-    if($cmboBulkProtocol.SelectedItem -ne "All"){
+    if($cmboBulkProtocol.SelectedIndex -ne -1 -and $cmboBulkProtocol.SelectedIndex -ne 0){
         $protocolSTR = ($cmboBulkProtocol.SelectedItem.split(" "))[0]
-        $allImpactedWS = $allImpactedWS | Where-Object { ($_.Protocol -like ($protocolSTR))} | Select-Object directoryId, WorkSpaceId,UserName,Region,FirstName,LastName,ComputerName,Email,RunningMode,State,Protocol,BundleId
+        $allImpactedWS = $allImpactedWS | Where-Object { ($_.Protocol -like ($protocolSTR))}
     }
     foreach ($impactedWS in $allImpactedWS){
         if($NULL -ne $impactedWS.WorkSpaceId -and $lstImpactedWorkSpaces.Items.WorkSpaceId -notcontains $impactedWS.WorkSpaceId){
@@ -168,7 +176,7 @@ function Write-Logger(){
    $logDate = Get-Date -Format "MM/dd/yyyy HH:mm K"
    $logEntry | Add-Member -NotePropertyName "loggingTime" -NotePropertyValue $logDate
    $logEntry | Add-Member -NotePropertyName "loggingMessage" -NotePropertyValue $message
-   $SilenceOutput=$lstLogging.items.Add($logEntry)
+   $lstLogging.items.Add($logEntry) | Out-Null
 }
 
 # This function counts and shows your current WorkSpaces counts (Total, Available, and Stopped)
@@ -177,7 +185,7 @@ function Update-Counter(){
     $available = ($global:WorkSpacesDB | Where-Object { $_.State -eq "AVAILABLE"}).Count
     $stopped = ($global:WorkSpacesDB | Where-Object { $_.State -eq "STOPPED"}).Count
     $PCoIP = ($global:WorkSpacesDB | Where-Object { $_.Protocol -eq "PCOIP"}).Count
-    $WSP = ($global:WorkSpacesDB | Where-Object { $_.Protocol -eq "WSP"}).Count
+    $DCV = ($global:WorkSpacesDB | Where-Object { $_.Protocol -eq "DCV"}).Count
     $BYOP = ($global:WorkSpacesDB | Where-Object { $_.Protocol -eq "BYOP"}).Count
     if($total -eq 0 -or $NULL -eq $total){
         $total = 0
@@ -191,8 +199,8 @@ function Update-Counter(){
     if($PCoIP -eq 0 -or $NULL -eq $PCoIP){
         $PCoIP = 0
     }
-    if($WSP -eq 0 -or $NULL -eq $WSP){
-        $WSP = 0
+    if($DCV -eq 0 -or $NULL -eq $DCV){
+        $DCV = 0
     }
     if($BYOP -eq 0 -or $NULL -eq $BYOP){
         $BYOP = 0
@@ -201,7 +209,7 @@ function Update-Counter(){
     $TotalAvailable_Count.content = $available
     $TotalStopped_Count.content = $stopped
     $lblBulkPCOIPCounter.content = $PCoIP
-    $lblBulkWSPCounter.content = $WSP
+    $lblBulkWSPCounter.content = $DCV
     $lblBulkBYOPCounter.content = $BYOP
 }
 
@@ -251,20 +259,25 @@ $btnUpdateComputeType.Add_Click({
     $WorkSpaceId = $WorkSpaceIdValue.Content
     $UpdateComputeReq = New-Object -TypeName PSobject
     $UpdateComputeReq | Add-Member -NotePropertyName "WorkSpaceId" -NotePropertyValue $WorkSpaceId
-    $UpdateComputeReq | Add-Member -NotePropertyName "CurrentCompute" -NotePropertyValue ($global:WorkSpacesDB | Where-Object {$_.WorkspaceId -eq $WorkSpaceId}).Compute
+    $UpdateComputeReq | Add-Member -NotePropertyName "CurrentCompute" -NotePropertyValue ($global:WorkSpacesDB | Where-Object {$_.WorkspaceId -eq $WorkSpaceId}).WorkspaceProperties.ComputeTypeName
     $UpdateComputeReq | Add-Member -NotePropertyName "TargetCompute" -NotePropertyValue $cmboComputeValue.SelectedItem
     $UpdateComputeReq | Add-Member -NotePropertyName "Region" -NotePropertyValue $RegionValue.Content 
-    $Output = Update-ComputeType -ComputeReq $UpdateComputeReq
-    if($Output.ErrorCode){
-        $ErrCode = $Output.ErrorCode.ToString()
-        $ErrMsg = $Output.ErrorMessage.ToString()
-        Write-Logger -message "Compute change failed for WorkSpaceId $WorkSpaceId Details below:"
-        Write-Logger -message "Error Code: $ErrCode"
-        Write-Logger -message "Error Message: $ErrMsg"
-        Show-MessageError -message "Error during Compute change, see log tab for details" -title "Error Changing Compute Type"
+    if($UpdateComputeReq.CurrentCompute -ne $UpdateComputeReq.TargetCompute){
+        $Output = Update-ComputeType -ComputeReq $UpdateComputeReq
+        if($Output.ErrorCode){
+            $ErrCode = $Output.ErrorCode.ToString()
+            $ErrMsg = $Output.ErrorMessage.ToString()
+            Write-Logger -message "Compute change failed for WorkSpaceId $WorkSpaceId Details below:"
+            Write-Logger -message "Error Code: $ErrCode"
+            Write-Logger -message "Error Message: $ErrMsg"
+            Show-MessageError -message "Error during Compute change, see log tab for details" -title "Error Changing Compute Type"
+        }else{
+            Show-MessageSuccess -message "Compute Type update on $WorkSpaceId executed successfully" -title "Successfully Updated Compute Type"
+            Write-Logger -message "Compute Type update on $WorkSpaceId executed successfully"
+        }
     }else{
-        Show-MessageSuccess -message "Compute Type update on $WorkSpaceId executed successfully" -title "Successfully Updated Compute Type"
-        Write-Logger -message "Compute Type update on $WorkSpaceId executed successfully"
+        $tmpCompute = $cmboComputeValue.SelectedItem
+        Show-MessageSuccess -message "Compute Type for $WorkSpaceId is already $tmpCompute" -title "No Changes to Compute Type"
     }
 })
 
@@ -272,7 +285,7 @@ $btnUpdateRootVolume.Add_Click({
     $WorkSpaceId = $WorkSpaceIdValue.Content
     $UpdateRootVolReq = New-Object -TypeName PSobject
     $UpdateRootVolReq | Add-Member -NotePropertyName "WorkSpaceId" -NotePropertyValue $WorkSpaceId
-    $UpdateRootVolReq | Add-Member -NotePropertyName "CurrentRootStorage" -NotePropertyValue $RootValue.Content
+    $UpdateRootVolReq | Add-Member -NotePropertyName "CurrentRootStorage" -NotePropertyValue $RootValue.WorkspaceProperties.RootVolumeSizeGib
     $UpdateRootVolReq | Add-Member -NotePropertyName "CurrentUserStorage" -NotePropertyValue $UserValue.Content
     $UpdateRootVolReq | Add-Member -NotePropertyName "Region" -NotePropertyValue $RegionValue.Content 
 
@@ -294,7 +307,7 @@ $btnUpdateUserVolume.Add_Click({
     $WorkSpaceId = $WorkSpaceIdValue.Content
     $UpdateUserVolReq = New-Object -TypeName PSobject
     $UpdateUserVolReq | Add-Member -NotePropertyName "WorkSpaceId" -NotePropertyValue $WorkSpaceId
-    $UpdateUserVolReq | Add-Member -NotePropertyName "CurrentRootStorage" -NotePropertyValue $RootValue.Content
+    $UpdateUserVolReq | Add-Member -NotePropertyName "CurrentRootStorage" -NotePropertyValue $RootValue.WorkspaceProperties.UserVolumeSizeGib
     $UpdateUserVolReq | Add-Member -NotePropertyName "CurrentUserStorage" -NotePropertyValue $UserValue.Content
     $UpdateUserVolReq | Add-Member -NotePropertyName "Region" -NotePropertyValue $RegionValue.Content 
 
@@ -398,7 +411,7 @@ $btnPowerUpWS.Add_Click({
 })
 
 $btnPowerDownWS.Add_Click({
-    $WorkSpaceId =$WorkSpaceIdValue.Content
+    $WorkSpaceId = $WorkSpaceIdValue.Content
     Write-Logger -message "Executing Stop on WorkSpaceId $WorkSpaceId"
     $StopReq = New-Object -TypeName PSobject
     $StopReq | Add-Member -NotePropertyName "WorkSpaceId" -NotePropertyValue $WorkSpaceId
@@ -418,7 +431,7 @@ $btnPowerDownWS.Add_Click({
 })
 
 $btnRebootWS.Add_Click({
-    $WorkSpaceId =$WorkSpaceIdValue.Content
+    $WorkSpaceId = $WorkSpaceIdValue.Content
     Write-Logger -message "Executing Reboot on WorkSpaceId $WorkSpaceId"
     $StopReq = New-Object -TypeName PSobject
     $StopReq | Add-Member -NotePropertyName "WorkSpaceId" -NotePropertyValue $WorkSpaceId
@@ -444,22 +457,27 @@ $btnChangeRunningMode.Add_Click({
     $UpdateRunningReq | Add-Member -NotePropertyName "WorkSpaceId" -NotePropertyValue $WorkSpaceId
     $UpdateRunningReq | Add-Member -NotePropertyName "CurrentRunMode" -NotePropertyValue $RunningModeUpdate
     $UpdateRunningReq | Add-Member -NotePropertyName "Region" -NotePropertyValue $RegionValue.Content 
-    $Output = Update-RunningMode -UpdateReq $UpdateRunningReq
-    if($RunningModeUpdate -eq "AUTO_STOP"){
-        $TargetRun = "ALWAYS_ON"
-    }else{
-        $TargetRun = "AUTO_STOP"
-    }
-    if($Output.ErrorCode){
-        $ErrCode = $Output.ErrorCode.ToString()
-        $ErrMsg = $Output.ErrorMessage.ToString()
-        Write-Logger -message "Running Mode change failed for WorkSpaceId $WorkSpaceId. Details below:"
-        Write-Logger -message "Error Code: $ErrCode"
-        Write-Logger -message "Error Message: $ErrMsg"
-        Show-MessageError -message "Error during Running Mode change, see log tab for details" -title "Error Changing Running Mode"
-    }else{
-        Show-MessageSuccess -message "Running Mode update on $WorkSpaceId executed successfully" -title "Successfully Updated Running Mode"
-        Write-Logger -message "Running Mode update to $TargetRun on $WorkSpaceId executed successfully"
+    $wshell = New-Object -ComObject Wscript.Shell
+    $response = $wshell.Popup("Are you sure you would like to change the running mode of WorkSpace $WorkSpaceId?",0,"Alert",64+4)
+    if($response -eq 6){
+        Write-Logger -message "Executing update to running mode on selected WorkSpaceId"
+        $Output = Update-RunningMode -UpdateReq $UpdateRunningReq
+        if($RunningModeUpdate -eq "AUTO_STOP"){
+            $TargetRun = "ALWAYS_ON"
+        }else{
+            $TargetRun = "AUTO_STOP"
+        }
+        if($Output.ErrorCode){
+            $ErrCode = $Output.ErrorCode.ToString()
+            $ErrMsg = $Output.ErrorMessage.ToString()
+            Write-Logger -message "Running Mode change failed for WorkSpaceId $WorkSpaceId. Details below:"
+            Write-Logger -message "Error Code: $ErrCode"
+            Write-Logger -message "Error Message: $ErrMsg"
+            Show-MessageError -message "Error during Running Mode change, see log tab for details" -title "Error Changing Running Mode"
+        }else{
+            Show-MessageSuccess -message "Running Mode update on $WorkSpaceId executed successfully" -title "Successfully Updated Running Mode"
+            Write-Logger -message "Running Mode update to $TargetRun on $WorkSpaceId executed successfully"
+        }
     }
 })
 
@@ -532,7 +550,7 @@ $btnGatherLogs.Add_Click({
 
 $btnRDP.Add_Click({
     $WorkSpaceLookup = $global:WorkSpacesDB | Where-Object { ($_.WorkSpaceId -like $WorkSpaceIdValue.Content) } 
-    if($WorkSpaceLookup.ComputerName[0] -ne "A"){
+    if(($WorkSpaceLookup.ComputerName[0] -ne "A") -or ($WorkSpaceLookup.ComputerName[0] -ne "U") -or ($WorkSpaceLookup.ComputerName[0] -ne "R")){
         if($WorkSpaceLookup.State -eq 'STOPPED'){
             $wshell = New-Object -ComObject Wscript.Shell
             $response=$wshell.Popup("Warning, WorkSpace is powered off, Would you like it powered on to connect?",0,"",0x1)
@@ -546,7 +564,7 @@ $btnRDP.Add_Click({
     }
 })
 
-# Button to Modify Protocol (PCoIP to WSP)
+# Button to Modify Protocol (PCoIP to DCV)
 $btnModifyProtocol.Add_Click({
     $WorkSpaceId = $WorkSpaceIdValue.Content
     $ProtocolModifyReq = New-Object -TypeName PSobject
@@ -573,20 +591,20 @@ $btnGetUserExperience.Add_Click({
     $global:cloudWatchRun++
 
     # Clear out last run
-    $CloudWatchHistoricalLatency.Source =($PSScriptRoot+"\\Assets\\CWHelper\\WorkSpacesHistoricalLatency-Start.png") 
-    $CloudWatchWorkSpaceLatency.Source =($PSScriptRoot+"\\Assets\\CWHelper\\WorkSpacesUDPPacketLoss-Start.png")
-    $CloudWatchWorkSpaceLaunch.Source =($PSScriptRoot+"\\Assets\\CWHelper\\WorkSpacesSessionLaunch-Start.png") 
-    $CloudWatchWorkSpaceCPU.Source =($PSScriptRoot+"\\Assets\\CWHelper\\WorkSpacesCPU-Start.png") 
-    $CloudWatchWorkSpaceMemory.Source =($PSScriptRoot+"\\Assets\\CWHelper\\WorkSpacesMemory-Start.png")
-    $CloudWatchWorkSpaceDisk.Source =($PSScriptRoot+"\\Assets\\CWHelper\\WorkSpacesDisk-Start.png")
-    $CloudWatchWorkSpaceCPU.Visibility ="Visible"
-    $CloudWatchWorkSpaceMemory.Visibility ="Visible"
-    $CloudWatchWorkSpaceDisk.Visibility ="Visible"
+    $CloudWatchHistoricalLatency.Source = ($PSScriptRoot+"\\Assets\\CWHelper\\WorkSpacesHistoricalLatency-Start.png") 
+    $CloudWatchWorkSpaceLatency.Source = ($PSScriptRoot+"\\Assets\\CWHelper\\WorkSpacesUDPPacketLoss-Start.png")
+    $CloudWatchWorkSpaceLaunch.Source = ($PSScriptRoot+"\\Assets\\CWHelper\\WorkSpacesSessionLaunch-Start.png") 
+    $CloudWatchWorkSpaceCPU.Source = ($PSScriptRoot+"\\Assets\\CWHelper\\WorkSpacesCPU-Start.png") 
+    $CloudWatchWorkSpaceMemory.Source = ($PSScriptRoot+"\\Assets\\CWHelper\\WorkSpacesMemory-Start.png")
+    $CloudWatchWorkSpaceDisk.Source = ($PSScriptRoot+"\\Assets\\CWHelper\\WorkSpacesDisk-Start.png")
+    $CloudWatchWorkSpaceCPU.Visibility = "Visible"
+    $CloudWatchWorkSpaceMemory.Visibility = "Visible"
+    $CloudWatchWorkSpaceDisk.Visibility = "Visible"
     $CloudWatchLoginInfo.items.clear()
     $CloudWatchWorkSpaceModifications.items.clear()
 
     $resources = Get-ChildItem -Path "$workingDirectory\SelectedWSMetrics\"
-    if($resources.count -ne 0-and($global:cloudWatchRun -eq 1)){
+    if($resources.count -ne 0 -and ($global:cloudWatchRun -eq 1)){
         foreach($item in $resources){
             $tmpFileName = $item.Name
             Remove-item -path "$workingDirectory\SelectedWSMetrics\$tmpFileName" -force -ErrorAction SilentlyContinue
@@ -610,20 +628,20 @@ $btnGetUserExperience.Add_Click({
             $CloudWatchWorkSpaceMemory.Source = ($imageRepo+"\WorkSpacesMemory"+$global:cloudWatchRun+".png") 
             $CloudWatchWorkSpaceMemory.Visibility ="Visible"
             $CloudWatchWorkSpaceDisk.Source = ($imageRepo+"\WorkSpacesDisk"+$global:cloudWatchRun+".png") 
-            $CloudWatchWorkSpaceDisk.Visibility ="Visible"
+            $CloudWatchWorkSpaceDisk.Visibility = "Visible"
 
             $global:CloudWatchTimer.Stop()
             $global:CloudWatchTimer.Dispose()
         }
 
-        if(($CloudWatchLoginInfo.items.Count -eq 0) -and($resources | Where-Object {$_.Name -like "ConnectionHistory"+$global:cloudWatchRun+".csv"})){
+        if(($CloudWatchLoginInfo.items.Count -eq 0) -and ($resources | Where-Object {$_.Name -like "ConnectionHistory"+$global:cloudWatchRun+".csv"})){
             $global:imagesRetrieved++
             $CSV = Import-Csv ($imageRepo+"\ConnectionHistory"+$global:cloudWatchRun+".csv")
             foreach ($record in $CSV){
                 $CloudWatchLoginInfo.items.Add($record)
             }   
         }
-        if(($CloudWatchWorkSpaceModifications.items.Count -eq 0) -and($resources | Where-Object {$_.Name -like "UserChanges"+$global:cloudWatchRun+".csv"})){
+        if(($CloudWatchWorkSpaceModifications.items.Count -eq 0) -and ($resources | Where-Object {$_.Name -like "UserChanges"+$global:cloudWatchRun+".csv"})){
             $global:imagesRetrieved++
             $CSV = Import-Csv ($imageRepo+"\UserChanges"+$global:cloudWatchRun+".csv")
             foreach ($record in $CSV){
@@ -679,7 +697,7 @@ $SearchResults.add_SelectionChanged({
         $WorkSpaceInfo = $global:WorkSpacesDB | Where-Object { ($_.WorkSpaceId -like $wsID) } 
         $UserNameValue.Content = $WorkSpaceInfo.UserName
         $WorkSpaceIdValue.Content = $WorkSpaceInfo.WorkspaceId
-        $WorkSpaceComputeType = $WorkSpaceInfo.Compute.Value | Out-String
+        $WorkSpaceComputeType = $WorkSpaceInfo.WorkspaceProperties.ComputeTypeName.Value | Out-String
         $WorkSpaceComputeType = $WorkSpaceComputeType.replace("`n","").replace("`r","")
 
         if($WorkSpaceComputeType.substring(0,1) -ne "G"){
@@ -692,17 +710,23 @@ $SearchResults.add_SelectionChanged({
             $cmboComputeValue.items.Add("PERFORMANCE")
             $cmboComputeValue.items.Add("POWER")
             $cmboComputeValue.items.Add("POWERPRO")
+            if(($global:WorkSpacesServiceQuotaDB | Where-Object {$_.Region -eq $WorkSpaceInfo.Region}).quotaWks4xl -ne 0){
+                $cmboComputeValue.items.Add("GP.4XL")
+            }
+            if(($global:WorkSpacesServiceQuotaDB | Where-Object {$_.Region -eq $WorkSpaceInfo.Region}).quotaWks8xl -ne 0){
+                $cmboComputeValue.items.Add("GP.8XL")
+            }
             $cmboComputeValue.SelectedItem = $WorkSpaceComputeType
         }else{
             $cmboComputeValue.Visibility="Hidden"
             $lblComputeValue.Visibility="Visible"
             $btnUpdateComputeType.Visibility="Hidden"
-            $cmboComputeValue.SelectedItem = $WorkSpaceComputeType
+            $lblComputeValue.Content = $WorkSpaceComputeType
         }
 
-        $RootValue.Content = $WorkSpaceInfo.RootVolume
-        $UserValue.Content = $WorkSpaceInfo.UserVolume
-        $RunningModeValue.Content = $WorkSpaceInfo.RunningMode
+        $RootValue.Content = $WorkSpaceInfo.WorkspaceProperties.RootVolumeSizeGib
+        $UserValue.Content = $WorkSpaceInfo.WorkspaceProperties.UserVolumeSizeGib
+        $RunningModeValue.Content = $WorkSpaceInfo.WorkspaceProperties.RunningMode
         $IPValue.Content = $WorkSpaceInfo.IPAddress
         $RegionValue.Content = $WorkSpaceInfo.Region
         $ComputerNameValue.Content = $WorkSpaceInfo.ComputerName
@@ -722,7 +746,7 @@ $SearchResults.add_SelectionChanged({
             $date = (get-date -Format "MM/dd/yyyy HH:mm") | Out-String
             $lblLastDBUpdate.Content = $date
         }
-        if(($ComputerNameValue.Content.substring(0,1) -eq "A")-or($ComputerNameValue.Content.substring(0,1) -eq "U")){
+        if(($ComputerNameValue.Content.substring(0,1) -eq "A") -or ($ComputerNameValue.Content.substring(0,1) -eq "U") -or ($ComputerNameValue.Content.substring(0,1) -eq "R")){
             $btnRemoteAssist.Visibility="Hidden"
             $btnRDP.Visibility="Hidden"
             $btnGatherLogs.Visibility="Hidden"
@@ -734,6 +758,34 @@ $SearchResults.add_SelectionChanged({
             $btnRDP.Visibility="Visible"
             $btnGatherLogs.Visibility="Visible"
             $btnBackupUserVolume.Visibility="Visible"
+        }
+        if($WorkSpaceInfo.StandbyWorkspacesProperties){
+            $btnMrrEnabled.Content = "Enabled"
+            if($WorkSpaceInfo.StandbyWorkspacesProperties.DataReplication -eq "PRIMARY_AS_SOURCE"){
+                $repSnapTime = ($WorkSpaceInfo.StandbyWorkspacesProperties.RecoverySnapshotTime).ToShortTimeString()
+                $repSnapDate = ($WorkSpaceInfo.StandbyWorkspacesProperties.RecoverySnapshotTime).ToShortDateString()
+                $btnMrrReplication.Content = "Replicating: $repSnapDate $repSnapTime"
+            }else{
+                $btnMrrReplication.Content = "Replicating: N/A"
+            }
+            
+        }else{
+            $btnMrrEnabled.Content = "N/A"
+            $btnMrrReplication.Content = ""
+        }
+        if($WorkSpaceInfo.WorkspaceProperties.GlobalAccelerator.Mode.Value -eq "INHERITED"){
+            $AgaDirSettings = $global:WorkSpacesDirectoryDB | Where-Object {$_.RegistrationCode -eq $WorkSpaceInfo.RegCode}
+            if($AgaDirSettings.StreamingProperties.GlobalAccelerator.Mode.Value -eq "ENABLED_AUTO"){
+                $lblWksAGAValue.Content = "Enabled"
+            }
+            elseif(($AgaDirSettings.StreamingProperties.GlobalAccelerator.Mode.Value -eq "DISABLED") -or ([string]::IsNullOrEmpty($AgaDirSettings.StreamingProperties.GlobalAccelerator))){
+                $lblWksAGAValue.Content = "Disabled"
+            }
+        }
+        elseif (($WorkSpaceInfo.WorkspaceProperties.GlobalAccelerator.Mode).Value -eq "ENABLED_AUTO") {
+            $lblWksAGAValue.Content = "Enabled"
+        }else{
+            $lblWksAGAValue.Content = "N/A"
         }
     }
 })
@@ -750,13 +802,18 @@ $selectWKSRegion.add_SelectionChanged({
     $migrateBundleCombo.items.Clear()
     $selectWKSBundle.items.Clear()
     $migrateBundleCombo.items.add("Select Bundle")
-    $bundles = $global:WorkSpacesDB | Where-Object { ($_.Region -eq $selectWKSRegion.SelectedItem)} | Select-Object BundleId, Protocol, BundleName -Unique
-    if($bundles.count -eq 0){
+    $deployedBundles = $global:WorkSpacesDB | Where-Object { ($_.Region -eq $selectWKSRegion.SelectedItem)} | Select-Object BundleId, Protocol -Unique
+    if($deployedBundles.count -eq 0){
         $selectWKSBundle.items.add("No Custom Bundles Found")
         $migrateBundleCombo.items.add("No Custom Bundles Found")
     }else{
-        foreach($bundle in $bundles){
-            $BundleConcat = $bundle.BundleId + " (" + $bundle.BundleName +")"
+        foreach($bundle in $deployedBundles){
+            $targetBundle = $global:WorkSpacesBundles | Where-Object { ($_.BundleID -eq $bundle.BundleID)} | Select-Object BundleId, Protocol, Name -Unique
+            if($null -eq $targetBundle.Name){
+                $BundleConcat = $bundle.BundleId + " (No Bundle Name)"
+            }else{
+                $BundleConcat = $bundle.BundleId + " (" + $targetBundle.Name + ")"
+            }
             $selectWKSBundle.items.add("$BundleConcat")
             $migrateBundleCombo.items.add("$BundleConcat")
         }
@@ -1002,37 +1059,22 @@ $btnBulkModifyProtocol.Add_Click({
 # This function creates a object to hold all of your AppStream sessions to act as a local db 
 # for the GUI
 function Get-AppStreamSessions(){
-    #Stop new queries, while data is populated
+    # Stop new queries, while data is populated
     $global:DataPullInProgress = $true
-    $cmboAppStreamHelpDesk.items.Clear()
-    $cmboAppStreamHelpDesk.items.add("*")
-    $cmboAppStreamHelpDesk.SelectedIndex = 0
-
-    $cmboAppStreamHelpDeskUserStateConnectedState.items.Clear()
-    $cmboAppStreamHelpDeskUserStateConnectedState.items.add("*")
-    $cmboAppStreamHelpDeskUserStateConnectedState.items.add("CONNECTED")
-    $cmboAppStreamHelpDeskUserStateConnectedState.items.add("NOT_CONNECTED")
     $cmboAppStreamHelpDeskUserStateConnectedState.SelectedIndex = 0
-
-    $cmboAppStreamHelpDeskUserState.items.Clear()
-    $cmboAppStreamHelpDeskUserState.items.add("*")
-    $cmboAppStreamHelpDeskUserState.items.add("ACTIVE")
     $cmboAppStreamHelpDeskUserState.SelectedIndex = 0
 
     $global:AppStreamDB = @()
 
-    # Get a list of all Stacks
+    # Get session info for target Stack
     $listAppStreamSessions.Items.Clear()
     if($cmboAppStreamHelpDeskRegion.SelectedIndex -ne -1 -and $cmboAppStreamHelpDeskRegion.SelectedIndex -ne 0){
-        $filteredStacks = $global:TotalStacks 
-        $region = $cmboAppStreamHelpDeskRegion.SelectedItem.ToString()
-        $filteredStacks = $global:TotalStacks | Where-Object { ($_[0].arn -split ":")[3] -eq $region }
-        foreach ($stack in $filteredStacks){
-            $cmboAppStreamHelpDesk.items.add($stack.Name)
-            $fleetName = $null
-            $fleetName = Get-APSAssociatedFleetList -StackName $stack.Name -Region $region
-            if($null -ne $fleetName){
-                $SessionList = Get-APSSessionList -StackName $stack.Name -FleetName $fleetName -Region $region -limit 50
+        if($cmboAppStreamHelpDesk.SelectedIndex -ne -1 -and $cmboAppStreamHelpDesk.SelectedIndex -ne 0){
+            Write-Host "Populating AppStream Session info"
+            $region = $cmboAppStreamHelpDeskRegion.SelectedItem.ToString()
+            $stack = $global:TotalStacks | Where-Object { ($_[0].arn -split ":")[3] -eq $region } | Where-Object { $_[0].Name -eq $cmboAppStreamHelpDesk.SelectedItem.ToString() }
+            if($null -ne $stack.AssocFleet){
+                $SessionList = Import-AppStreamSessions -stackName $stack.Name -fleetName $stack.AssocFleet -region $region -throttleControl $true
                 foreach ($session in $SessionList){
                     $AS2Session = New-Object -TypeName PSobject
                     $AS2Session | Add-Member -NotePropertyName "UserId" -NotePropertyValue $session.UserId
@@ -1043,6 +1085,22 @@ function Get-AppStreamSessions(){
                     $AS2Session | Add-Member -NotePropertyName "PrivateIP" -NotePropertyValue $session.NetworkAccessConfiguration.EniPrivateIpAddress
                     $AS2Session | Add-Member -NotePropertyName "Id" -NotePropertyValue $session.Id
                     $global:AppStreamDB  += $AS2Session
+                }
+                $fleetDetails = Get-APSFleetList -Name $stack.AssocFleet -Region $region
+                $lblFleetName.Content = $fleetDetails.Name
+                $lblFleetState.Content = $fleetDetails.State
+                $lblFleetMode.Content = $fleetDetails.FleetType
+                $lblFleetImage.Content = $fleetDetails.ImageName
+                $lblFleetInstances.Content = $fleetDetails.ComputeCapacityStatus.Running
+                $lblFleetAvailable.Content = $fleetDetails.ComputeCapacityStatus.Available
+                $lblFleetInUse.Content = $fleetDetails.ComputeCapacityStatus.InUse
+                $lblFleetUserSessions.Content = $fleetDetails.ComputeCapacityStatus.ActualUserSessions
+                $lblFleetActiveSessions.Content = $fleetDetails.ComputeCapacityStatus.ActiveUserSessions
+                $lblFleetAvailableSessions.Content = $fleetDetails.ComputeCapacityStatus.AvailableUserSessions
+                if($null -eq $fleetDetails.FleetErrors.ErrorCode){
+                    $txtboxFleetErrors.Text = "N/A"
+                }else{
+                    $txtboxFleetErrors.Text = $fleetDetails.FleetErrors.ErrorMessage
                 }
             }
         }
@@ -1065,13 +1123,13 @@ function Search-AppStreamSession(){
     if($txtAppStreamHelpDeskUserIP.Text -ne ""){
         $filtered = $filtered | Where-Object { ($_.PrivateIP -like ($txtAppStreamHelpDeskUserIP.Text + "*")) } | Select-Object UserId, Stack, State, ConnectedState, StartTime, PrivateIP, Id
     }
-    if($cmboAppStreamHelpDesk.SelectedItem.ToString() -ne ""){
+    if($cmboAppStreamHelpDesk.SelectedIndex -ne -1 -and $cmboAppStreamHelpDesk.SelectedIndex -ne 0){
         $filtered = $filtered | Where-Object { ($_.Stack -like ($cmboAppStreamHelpDesk.SelectedItem.ToString())) } | Select-Object UserId, Stack, State, ConnectedState, StartTime, PrivateIP, Id
     }
-    if($cmboAppStreamHelpDeskUserState.SelectedItem.ToString() -ne ""){
+    if($cmboAppStreamHelpDeskUserState.SelectedItem.ToString() -ne "All"){
         $filtered = $filtered | Where-Object { ($_.State -like ($cmboAppStreamHelpDeskUserState.SelectedItem.ToString())) } | Select-Object UserId, Stack, State, ConnectedState, StartTime, PrivateIP, Id
     }
-    if($cmboAppStreamHelpDeskUserState.SelectedItem.ToString() -ne ""){
+    if($cmboAppStreamHelpDeskUserStateConnectedState.SelectedItem.ToString() -ne "All"){
         $filtered = $filtered | Where-Object { ($_.ConnectedState -like ($cmboAppStreamHelpDeskUserStateConnectedState.SelectedItem.ToString())) } | Select-Object UserId, Stack, State, ConnectedState, StartTime, PrivateIP, Id
     }
 
@@ -1083,19 +1141,23 @@ function Search-AppStreamSession(){
 # This function pulls all regions that you have deployed AppStream 
 function Get-AppStreamRegions(){
     $cmboAppStreamHelpDeskRegion.items.clear()
-    $SilenceOutput=$cmboAppStreamHelpDeskRegion.items.add("Select Region")
+    $cmboAppStreamHelpDeskRegion.items.add("Select a Region") | Out-Null
+    $cmboAppStreamHelpDesk.items.clear()
+    $cmboAppStreamHelpDesk.items.add("Pending Region") | Out-Null
+    $listPoolsSessions.items.clear()
     $global:TotalStacks = @()
-    $regions = @('us-east-1', 'us-east-2', 'us-west-2', 'ap-south-1', 'ap-northeast-2', 'ap-southeast-1', 'ap-southeast-2', 'ap-northeast-1', 'ca-central-1', 'eu-central-1','eu-west-1', 'eu-west-2')
-    foreach ($region in $regions){
-        $TempStacks = $null
-        $TempStacks = Get-APSStackList -Region $region
-        if($null -ne $TempStacks){
-            $global:TotalStacks += $TempStacks
-            if($cmboAppStreamHelpDeskRegion.Items -notcontains $region){
-                $SilenceOutput=$cmboAppStreamHelpDeskRegion.items.add("$region")
-            }
+    $tempStacks = Import-AppStreamRegions -throttleControl $true
+    foreach ($stack in $tempStacks){
+        $parsedRegion = ($stack.arn -split ":")[3]
+        if ($cmboAppStreamHelpDeskRegion.Items -notcontains $parsedRegion){
+            $cmboAppStreamHelpDeskRegion.items.add("$parsedRegion") | Out-Null
         }
+        $fleetName = $null
+        $fleetName = Get-APSAssociatedFleetList -StackName $stack.Name -Region $parsedRegion
+        $stack | Add-Member -NotePropertyName "AssocFleet" -NotePropertyValue $fleetName
+        $global:TotalStacks += $stack
     }
+
     $cmboAppStreamHelpDeskRegion.SelectedIndex=0
 }
 
@@ -1127,8 +1189,38 @@ $txtAppStreamHelpDeskUserIP.Add_TextChanged({
 })
 
 $cmboAppStreamHelpDesk.add_SelectionChanged({
-    if(!$global:DataPullInProgress){
-        Search-AppStreamSession
+    if(!$global:DataPullInProgress -and $cmboAppStreamHelpDesk.SelectedIndex -ne 0){
+        $date = (get-date -Format "MM/dd/yyyy HH:mm") | Out-String
+        $lblLastASDBUpdate.Content = $date
+        Get-AppStreamSessions
+    }
+})
+
+$cmboAppStreamHelpDeskRegion.add_SelectionChanged({
+    $lblFleetName.Content = ""
+    $lblFleetState.Content = ""
+    $lblFleetMode.Content = ""
+    $lblFleetImage.Content = ""
+    $txtboxFleetErrors.Text = ""
+    $lblFleetInstances.Content = "0"
+    $lblFleetAvailable.Content = "0"
+    $lblFleetInUse.Content = "0"
+    $lblFleetUserSessions.Content = "0"
+    $lblFleetActiveSessions.Content = "0"
+    $lblFleetAvailableSessions.Content = "0"
+    if($cmboAppStreamHelpDeskRegion.SelectedIndex -ne -1 -and $cmboAppStreamHelpDeskRegion.SelectedIndex -ne 0){
+        $global:DataPullInProgress = $false
+        $cmboAppStreamHelpDesk.items.clear()
+        $cmboAppStreamHelpDesk.items.add("Select a Stack") | Out-Null
+        $region = $cmboAppStreamHelpDeskRegion.SelectedItem.ToString()
+        $filteredStacks = $global:TotalStacks | Where-Object { ($_[0].arn -split ":")[3] -eq $region }
+        foreach($stack in $filteredStacks){
+            $tmpStack = $stack.Name
+            $cmboAppStreamHelpDesk.items.add("$tmpStack") | Out-Null
+        }
+        $cmboAppStreamHelpDesk.SelectedIndex = 0
+    }else{
+        $cmboAppStreamHelpDesk.SelectedIndex = 0
     }
 })
 
@@ -1143,16 +1235,12 @@ $cmboAppStreamHelpDeskUserStateConnectedState.add_SelectionChanged({
     }
 })
 
-$cmboAppStreamHelpDeskRegion.add_SelectionChanged({
-    Get-AppStreamSessions
-})
-
 $btnAppStreamHelpDeskSessionExport.Add_Click({
     if($null -ne $txtReporting.Text){
         $ImpactedList = $listAppStreamSessions.Items 
         $filteredList = @()
-        foreach($WS in $ImpactedList){
-            $filteredList += $WS
+        foreach($AS in $ImpactedList){
+            $filteredList += $AS
         }
         $output = $txtReporting.text + "AppStreamSessions.csv"
         try{
@@ -1163,6 +1251,209 @@ $btnAppStreamHelpDeskSessionExport.Add_Click({
         }
     }else{
         Show-MessageError -message "Export failed due to export path not being set on Admin tab." -title "Export Failed"
+    }
+})
+
+$btnUpdateASData.Add_Click({
+    if(!$global:DataPullInProgress -and $cmboAppStreamHelpDesk.SelectedIndex -ne 0){
+        $date = (get-date -Format "MM/dd/yyyy HH:mm") | Out-String
+        $lblLastASDBUpdate.Content = $date
+        Get-AppStreamSessions
+    }
+})
+
+###############################################
+# ! # ! # WorkSpaces Pools GUI # ! # ! # 
+###############################################
+
+# This function pulls all regions that you have deployed WorkSpaces Pools 
+function Get-WksPoolsRegions(){
+    $cmboPoolsRegion.items.clear()
+    $cmboPoolsRegion.items.add("Select a Region") | Out-Null
+    $cmboPoolsSelect.items.clear()
+    $cmboPoolsSelect.items.add("Pending Region") | Out-Null
+    $global:WksPoolsDirectories = @()
+    $global:WksPools = @()
+    $global:WksPoolsDirectories = Get-WksPoolsDirectories -throttleControl $true
+    $tempRegions = $global:WksPoolsDirectories | Select-Object Region -Unique
+    $tempPools = Get-WksPools -DeployedRegions $tempRegions -bundles $global:WorkSpacesBundles -throttleControl $true
+    foreach ($pool in $tempPools){
+        $parsedRegion = ($pool.PoolArn -split ":")[3]
+        if ($cmboPoolsRegion.Items -notcontains $parsedRegion){
+            $cmboPoolsRegion.items.add("$parsedRegion") | Out-Null
+        }
+        $global:WksPools += $pool
+    }
+
+    $cmboPoolsRegion.SelectedIndex=0
+}
+
+function Get-PoolsSessions(){
+    # Stop new queries, while data is populated
+    $global:PoolsDataPullInProgress = $true
+    $cmboPoolsUserStateConnectedState.SelectedIndex = 0
+    $global:WksPoolsSessions = @()
+
+    # Get session info for target Stack
+    $listPoolsSessions.Items.Clear()
+    if($cmboPoolsRegion.SelectedIndex -ne -1 -and $cmboPoolsRegion.SelectedIndex -ne 0){
+        if($cmboPoolsSelect.SelectedIndex -ne -1 -and $cmboPoolsSelect.SelectedIndex -ne 0){
+            $region = $cmboPoolsRegion.SelectedItem.ToString()
+            $pool = $global:WksPools | Where-Object { ($_[0].PoolArn -split ":")[3] -eq $region } | Where-Object { $_[0].PoolName -eq $cmboPoolsSelect.SelectedItem.ToString() }
+            if($null -ne $pool){
+                $SessionList = Import-WksPoolsSessions -poolId $pool.PoolId -region $region -throttleControl $true
+                foreach ($session in $SessionList){
+                    $PoolsSession = New-Object -TypeName PSobject
+                    $PoolsSession | Add-Member -NotePropertyName "UserId" -NotePropertyValue $session.UserId
+                    $PoolsSession | Add-Member -NotePropertyName "ConnectedState" -NotePropertyValue $session.ConnectionState
+                    $PoolsSession | Add-Member -NotePropertyName "StartTime" -NotePropertyValue $session.StartTime.ToString()
+                    $PoolsSession | Add-Member -NotePropertyName "PrivateIP" -NotePropertyValue $session.NetworkAccessConfiguration.EniPrivateIpAddress
+                    $PoolsSession | Add-Member -NotePropertyName "SessionId" -NotePropertyValue $session.SessionId
+                    $global:WksPoolsSessions += $PoolsSession
+                }
+                $lblPoolName.Content = $pool.PoolName
+                $lblPoolState.Content = $pool.State
+                $lblPoolId.Content = $pool.PoolId
+                $lblPoolsBundle.Content = $pool.BundleId
+                $lblPoolsUserSessions.Content = $pool.CapacityStatus.ActualUserSessions
+                $lblPoolsActiveSessions.Content = $pool.CapacityStatus.ActiveUserSessions
+                $lblPoolsAvailableSessions.Content = $pool.CapacityStatus.AvailableUserSessions
+                $lblPoolsDesiredSessions.Content = $pool.CapacityStatus.DesiredUserSessions
+                if($null -eq $fleetDetails.Errors.ErrorCode){
+                    $txtboxPoolsErrors.Text = "N/A"
+                }else{
+                    $txtboxPoolsErrors.Text = $fleetDetails.Errors.ErrorMessage
+                }
+            }
+        }
+    }
+    $global:PoolsDataPullInProgress=$false
+    Search-WksPoolsSessions
+}
+
+# This functions filters your AppStream db object to only display information matching your search criteria 
+function Search-WksPoolsSessions(){
+    $listPoolsSessions.Items.Clear()
+
+    $filtered = $global:WksPoolsSessions 
+    if($txtPoolsUserId.Text -ne ""){
+        $filtered = $filtered | Where-Object { ($_.UserId -like ($txtPoolsUserId.Text + "*")) } | Select-Object UserId, ConnectedState, StartTime, PrivateIP, SessionId
+    }
+    if($txtPoolsUserSessionId.Text -ne ""){
+        $filtered = $filtered | Where-Object { ($_.SessionId -like ($txtPoolsUserSessionId.Text + "*")) } | Select-Object UserId, ConnectedState, StartTime, PrivateIP, SessionId
+    }
+    if($txtPoolsUserIP.Text -ne ""){
+        $filtered = $filtered | Where-Object { ($_.PrivateIP -like ($txtPoolsUserIP.Text + "*")) } | Select-Object UserId, ConnectedState, StartTime, PrivateIP, SessionId
+    }
+    if($cmboPoolsUserStateConnectedState.SelectedItem.ToString() -ne "All"){
+        $filtered = $filtered | Where-Object { ($_.ConnectedState -like ($cmboPoolsUserStateConnectedState.SelectedItem.ToString())) } | Select-Object UserId, ConnectedState, StartTime, PrivateIP, SessionId
+    }
+
+    foreach($session in $filtered){
+        $listPoolsSessions.items.Add($session)
+    }
+}
+
+$cmboPoolsRegion.add_SelectionChanged({
+    $lblPoolName.Content = ""
+    $lblPoolState.Content = ""
+    $lblPoolId.Content = ""
+    $lblPoolsBundle.Content = ""
+    $txtboxPoolsErrors.Text = ""
+    $lblPoolsDesiredSessions = "0"
+    $lblPoolsUserSessions.Content = "0"
+    $lblPoolsActiveSessions.Content = "0"
+    $lblPoolsAvailableSessions.Content = "0"
+    if($cmboPoolsRegion.SelectedIndex -ne -1 -and $cmboPoolsRegion.SelectedIndex -ne 0){
+        $global:PoolsDataPullInProgress = $false
+        $cmboPoolsSelect.items.clear()
+        $cmboPoolsSelect.items.add("Select a Pool") | Out-Null
+        $region = $cmboPoolsRegion.SelectedItem.ToString()
+        $filteredPools = $global:WksPools | Where-Object { ($_[0].PoolArn -split ":")[3] -eq $region }
+        foreach($pool in $filteredPools){
+            $tmpPool = $pool.PoolName
+            $cmboPoolsSelect.items.add("$tmpPool") | Out-Null
+        }
+        $cmboPoolsSelect.SelectedIndex = 0
+    }else{
+        $cmboPoolsSelect.SelectedIndex = 0
+    }
+})
+
+$cmboPoolsSelect.add_SelectionChanged({
+    if(!$global:PoolsDataPullInProgress -and $cmboPoolsSelect.SelectedIndex -ne 0){
+        $date = (get-date -Format "MM/dd/yyyy HH:mm") | Out-String
+        $lblLastPoolsDBUpdate.Content = $date
+        Get-PoolsSessions
+    }else{
+        $lblLastPoolsDBUpdate.Content = "Pending"
+    }
+})
+
+$cmboPoolsUserStateConnectedState.add_SelectionChanged({
+    if(!$global:PoolsDataPullInProgress){
+        Search-WksPoolsSessions
+    }
+})
+
+$txtPoolsUserId.Add_TextChanged({
+    if(!$global:PoolsDataPullInProgress){
+        Search-WksPoolsSessions
+    }
+})
+
+$txtPoolsUserSessionId.Add_TextChanged({
+    if(!$global:PoolsDataPullInProgress){
+        Search-WksPoolsSessions
+    }
+})
+
+$txtPoolsUserIP.Add_TextChanged({
+    if(!$global:PoolsDataPullInProgress){
+        Search-WksPoolsSessions
+    }
+})
+
+$btnPoolsSessionExport.Add_Click({
+    if($null -ne $txtReporting.Text){
+        $ImpactedList = $listPoolsSessions.Items 
+        $filteredList = @()
+        foreach($poolSess in $ImpactedList){
+            $filteredList += $poolSess
+        }
+        $output = $txtReporting.text + "WksPoolsSessions.csv"
+        try{
+            $filteredList | Export-Csv -Path ($output) -NoTypeInformation
+            Show-MessageSuccess -message "Successfully exported CSV to provided path" -title "Successfully Exported"
+        }catch{
+            Show-MessageError -message "Export failed to write CSV to provided path." -title "Export Failed"
+        }
+    }else{
+        Show-MessageError -message "Export failed due to export path not being set on Admin tab." -title "Export Failed"
+    }
+})
+
+$btnPoolsSessionDisconnect.Add_Click({
+    $sessionId = $listPoolsSessions.SelectedItems.SessionId
+    Remove-WKSWorkspacesPoolSession -SessionId $sessionId
+    Start-Sleep -Seconds 2
+    if(!$global:PoolsDataPullInProgress){
+        Get-PoolsSessions
+    }
+})
+
+$btnPoolsRemoteAssist.Add_Click({
+    $privateIP = $listPoolsSessions.SelectedItems.PrivateIP
+    $parameters = "/offerRA $privateIP"
+    $exe = "msra.exe"
+    start-process $exe $parameters -Wait    
+})
+
+$btnUpdatePoolsData.Add_Click({
+    if(!$global:PoolsDataPullInProgress -and $cmboAppStreamHelpDesk.SelectedIndex -ne 0){
+        $date = (get-date -Format "MM/dd/yyyy HH:mm") | Out-String
+        $lblLastPoolsDBUpdate.Content = $date
+        Get-PoolsSessions
     }
 })
 
@@ -1201,76 +1492,116 @@ function Update-WorkSpaceAdminDirectories(){
 
 function Update-WorkSpaceAdminDirectoryDetails(){
     $directoryInfo = $global:WorkSpacesDirectoryDB | Where-Object { ($_.directoryId -eq $cmboAdminWSDirectory.SelectedValue)} | Get-Unique
-    $lblAdminDirectoryAliasContent.Content = $directoryInfo.directoryAlias
-    $lblAdminDirectoryNameContent.Content = $directoryInfo.directoryName
+    $lblAdminDirectoryAliasContent.Content = $directoryInfo.Alias
+    $lblAdminDirectoryNameContent.Content = $directoryInfo.DirectoryName
     $lblAdminDirectoryIdContent.Content = $directoryInfo.directoryId
     $lblAdminDirectoryRegCodeContent.Content = $directoryInfo.RegistrationCode
-    $lblAdminDirectoryStateContent.Content = $directoryInfo.directoryState
-    $lblAdminDirectoryLocalAdinContent.Content = $directoryInfo.directoryUserEnabledAsLocalAdministrator
-    $lblAdminDirectoryTenancyContent.Content = $directoryInfo.directoryTenancy
+    $lblAdminDirectoryStateContent.Content = $directoryInfo.State
+    $lblAdminDirectoryLocalAdinContent.Content = $directoryInfo.WorkspaceCreationProperties.UserEnabledAsLocalAdministrator
+    $lblAdminDirectoryTenancyContent.Content = $directoryInfo.Tenancy
     $lblAdminDirectoryIPContent.Content = $directoryInfo.directoryAvailableIPs
 }
 
 function Update-ServiceQuotas(){
     $targetDirectory = $global:WorkSpacesServiceQuotaDB | Where-Object { ($_.Region -eq $cmboAdminSelectRegionValue.SelectedValue)} | Get-Unique
 
+    # Total WorkSpaces Quota
     $lblAdminWSServiceQuotaCurrent.Content = (($global:WorkSpacesDB | Where-Object { ($_.Region -eq $cmboAdminSelectRegionValue.SelectedValue)}).count)
     $lblAdminWSServiceQuotaCurrentMax.Content = $targetDirectory.quotaWks
 
-    $lblAdminWSStandByServiceQuotaCurrent.Content = "N/A"
+    # Total WorkSpaces 4xl Quota 
+    $lblAdminWSService4xlQuotaCurrent.Content = (($global:WorkSpacesDB | Where-Object { ($_.Region -eq $cmboAdminSelectRegionValue.SelectedValue)} | Where-Object {($_.WorkspaceProperties.ComputeTypeName).ToUpper -eq "GENERALPURPOSE_4XLARGE"}).count)
+    $lblAdminWSService4xlQuotaCurrentMax.Content = $targetDirectory.quotaWks4xl
+
+    # Total WorkSpaces 8xl Quota 
+    $lblAdminWSService8xlQuotaCurrent.Content = (($global:WorkSpacesDB | Where-Object { ($_.Region -eq $cmboAdminSelectRegionValue.SelectedValue)} | Where-Object {($_.WorkspaceProperties.ComputeTypeName).ToUpper -eq "GENERALPURPOSE_8XLARGE"}).count)
+    $lblAdminWSService8xlQuotaCurrentMax.Content = $targetDirectory.quotaWks8xl
+
+    # Total WorkSpaces for StandBy 
+    $lblAdminWSStandByServiceQuotaCurrent.Content = ($global:WorkSpacesDB | Where-Object { ($_.Region -eq $cmboAdminSelectRegionValue.SelectedValue)} | Where-Object { -not ([string]::IsNullOrEmpty($_.StandbyWorkspacesProperties)) }).count
     $lblAdmintWSStandByServiceQuotaMax.Content = $targetDirectory.quotaStandby
 
-    $lblAdminWSGraphicsServiceQuotaCurrent.Content = (($global:WorkSpacesDB | Where-Object { ($_.Region -eq $cmboAdminSelectRegionValue.SelectedValue)} | Where-Object {($_.WorkspaceProperties.ComputeTypeName).ToUpper -eq "GRAPHICS"}).count)
-    $lblAdminWSGraphicsServiceQuotaMax.Content = $targetDirectory.quotaGraphics
-
+    # Total WorkSpaces for GraphicsPro
     $lblAdminWSGraphicsProServiceQuotaCurrent.Content = (($global:WorkSpacesDB | Where-Object { ($_.Region -eq $cmboAdminSelectRegionValue.SelectedValue)} | Where-Object {($_.WorkspaceProperties.ComputeTypeName).ToUpper -eq "GRAPHICSPRO"}).count)
     $lblAdminWSGraphicsProServiceQuotaMax.Content = $targetDirectory.quotaGraphicsPro
 
+    # Total WorkSpaces for Graphics G4dn
     $lblAdminWSGraphicsg4dnServiceQuotaCurrent.Content = (($global:WorkSpacesDB | Where-Object { ($_.Region -eq $cmboAdminSelectRegionValue.SelectedValue)} | Where-Object {($_.WorkspaceProperties.ComputeTypeName).ToUpper -eq "GRAPHICS.G4DN"}).count)
     $lblAdminWSGraphicsg4dnProServiceQuotaMax.Content = $targetDirectory.quotaG4dn
 
+    # Total WorkSpaces for GraphicsPro G4dn
     $lblAdminWSGraphicsg4dnProServiceQuotaCurrent.Content = (($global:WorkSpacesDB | Where-Object { ($_.Region -eq $cmboAdminSelectRegionValue.SelectedValue)} | Where-Object {($_.WorkspaceProperties.ComputeTypeName).ToUpper -eq "GRAPHICSPRO.G4DN"}).count)
     $lblAdminWSGraphicsg4dnServiceQuotaMax.Content = $targetDirectory.quotaG4dnPro
+
 }
 
+###############################################
+# ! # ! # EUC Toolkit Initialization # ! # ! # 
+###############################################
 
-# Populate protocol dropown options
-$SilenceOutput = $cmboProtocol.items.Add("All")
-$SilenceOutput = $cmboProtocol.items.Add("BYOP")
-$SilenceOutput = $cmboProtocol.items.Add("WSP")
-$SilenceOutput = $cmboProtocol.items.Add("PCoIP")
-$SilenceOutput = $cmboProtocol.SelectedIndex=0
-$SilenceOutput = $cmboBulkProtocol.items.Add("All")
-$SilenceOutput = $cmboBulkProtocol.items.Add("BYOP")
-$SilenceOutput = $cmboBulkProtocol.items.Add("WSP")
-$SilenceOutput = $cmboBulkProtocol.items.Add("PCoIP")
+# WorkSpaces
+$cmboProtocol.items.Add("All") | Out-Null
+$cmboProtocol.items.Add("BYOP") | Out-Null
+$cmboProtocol.items.Add("DCV") | Out-Null
+$cmboProtocol.items.Add("PCoIP") | Out-Null
+$cmboProtocol.SelectedIndex=0
+$cmboBulkProtocol.items.Add("All") | Out-Null
+$cmboBulkProtocol.items.Add("BYOP") | Out-Null
+$cmboBulkProtocol.items.Add("DCV") | Out-Null
+$cmboBulkProtocol.items.Add("PCoIP") | Out-Null
 $cmboBulkProtocol.SelectedIndex=0
-# Initialization
+$selectRunningModeFilterCombo.items.Add("Select Running Mode") | Out-Null
+$selectRunningModeFilterCombo.items.Add("ALWAYS_ON") | Out-Null
+$selectRunningModeFilterCombo.items.Add("AUTO_STOP") | Out-Null
+$selectRunningModeFilterCombo.SelectedIndex=0
+$migrateBundleCombo.items.add("Select Bundle") | Out-Null
+$migrateBundleCombo.SelectedIndex=0
 
 Update-WorkSpaceObject
-
 Search-WorkSpaces
-
-$SilenceOutput = Get-AppStreamSessions
 $regions = $global:WorkSpacesDB.Region | Select-Object -Unique
 foreach($region in $regions){
     if(-not(($selectWKSRegion.Items).Contains($region))){
-        $SilenceOutput=$selectWKSRegion.Items.Add($region)
-        $SilenceOutput=$cmboAdminSelectRegionValue.Items.Add($region)
+        $selectWKSRegion.Items.Add($region) | Out-Null
+        $cmboAdminSelectRegionValue.Items.Add($region) | Out-Null
     }
 }
+$global:cloudWatchRun=0
+$cmboAdminSelectRegionValue.SelectedIndex=0
+
+# Pools
+write-host "Populating WorkSpaces Pools info"
+$cmboPoolsUserStateConnectedState.items.add("All") | Out-Null
+$cmboPoolsUserStateConnectedState.items.add("CONNECTED") | Out-Null
+$cmboPoolsUserStateConnectedState.items.add("NOT_CONNECTED") | Out-Null
+$cmboPoolsUserStateConnectedState.SelectedIndex = 0
+Get-WksPoolsRegions
+
+# AppStream
+$global:DataPullInProgress=$true
+$cmboAppStreamHelpDesk.items.add("Select a Stack") | Out-Null
+$cmboAppStreamHelpDesk.SelectedIndex = 0
+$cmboAppStreamHelpDeskUserStateConnectedState.items.add("All") | Out-Null
+$cmboAppStreamHelpDeskUserStateConnectedState.items.add("CONNECTED") | Out-Null
+$cmboAppStreamHelpDeskUserStateConnectedState.items.add("NOT_CONNECTED") | Out-Null
+$cmboAppStreamHelpDeskUserStateConnectedState.SelectedIndex = 0
+
+$cmboAppStreamHelpDeskUserState.items.Clear()
+$cmboAppStreamHelpDeskUserState.items.add("All") | Out-Null
+$cmboAppStreamHelpDeskUserState.items.add("ACTIVE") | Out-Null
+$cmboAppStreamHelpDeskUserState.SelectedIndex = 0
+$global:DataPullInProgress=$false
+Get-AppStreamRegions
+
 
 # Preset admin tab textboxes
 $tmpPath = $($PSScriptRoot)+"\Assets\"
-	   
-# Preset admin tab textboxes
-$tmpPath = $($PSScriptRoot)+"\Assets\"
 
-# if there is a settings CSV with Values
-$settingsCSVFile=$tmpPath+"Settings.csv"
+# If there is a settings CSV with Values
+$settingsCSVFile = $tmpPath+"Settings.csv"
 if ([System.IO.File]::Exists($settingsCSVFile)) {
-    $loadSettings =Import-Csv $settingsCSVFile
-    $loadSettings |ForEach{
+    $loadSettings = Import-Csv $settingsCSVFile
+    $loadSettings | ForEach{
         $txtServerSideLogs.Text = $_.WorkSpaceSideLogs
         $txtBackUpDest.Text = $_.Backups
         $txtPSExecPath.Text = $_.PSEXEC 
@@ -1286,25 +1617,11 @@ if ([System.IO.File]::Exists($settingsCSVFile)) {
     $txtReporting.Text = $tmpPath
 }
 
-# Populate Compute Dropdown in Main
-$selectRunningModeFilterCombo.items.Clear()
-$SilenceOutput=$selectRunningModeFilterCombo.items.Add("Select Running Mode")
-$SilenceOutput=$selectRunningModeFilterCombo.items.Add("ALWAYS_ON")
-$SilenceOutput=$selectRunningModeFilterCombo.items.Add("AUTO_STOP")
-$selectRunningModeFilterCombo.SelectedIndex=0
-Get-AppStreamRegions
-
-# Populate Bundle Combos
-$SilenceOutput=$SilenceOutput=$migrateBundleCombo.items.add("Select Bundle")
-$cmboAdminSelectRegionValue.SelectedIndex=0
-
 # Set index on Main items 
 $SearchResults.SelectedIndex=0
 
 # Set index on Region Bulk selection
 $selectWKSRegion.SelectedIndex=0
-
-$global:cloudWatchRun=0
 
 Write-Logger -message "EUC Toolkit Launched"
 write-host "Powershell GUI Loaded"

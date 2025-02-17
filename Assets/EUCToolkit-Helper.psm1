@@ -18,87 +18,70 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 .SYNOPSIS
     This script module provides helper functions for the EUC Toolkit.
 .DESCRIPTION
-    This script module performs the heavy lifting for the EUC toolkit. This includes building the local db object, optimiziing API calls,
-    returning error and success messages, generating dhasboard images, and othe functionality part of the EUC toolkit. For more information,
+    This script module performs the heavy lifting for the EUC toolkit. This includes building the local db object, optimizing API calls,
+    returning error and success messages, generating dashboard images, and other functionality part of the EUC toolkit. For more information,
     see the link below:
     https://github.com/aws-samples/euc-toolkit
 #>
 
-# Current WorkSpaces Regions. See link below for current WorkSpaces availbility
+# Current WorkSpaces Regions. See link below for current WorkSpaces availability
 # https://docs.aws.amazon.com/workspaces/latest/adminguide/azs-workspaces.html
 
 
 function Get-LocalWorkSpacesDB(){
     param(
-        $DeployedRegions
+        $DeployedRegions,
+        $throttleControl
     )
     # This function build a PSObject that contains all of your WorkSpaces information. The object will act as a local DB for the GUI.
     # If you need to have object persistence to save API calls, this function can be replaced with a function that calls your persistent store.
     $WorkSpacesDDB = @()
-    # Finds all current WorkSpaces. If Actice Directory cannot be reached, those attributes are omitted.
+    # Finds all current WorkSpaces. If Active Directory cannot be reached, those attributes are omitted.
     foreach($DeployedRegion in $DeployedRegions){
-        $RegionalWks = Get-WKSWorkSpaces -Region $DeployedRegion.Region -DirectoryId $DeployedRegion.DirectoryId
-        $RegionalBundles = Get-AllBundles -Region $DeployedRegion.Region -Custom $true
+        $wksResponse = Get-WKSWorkSpaces -Region $DeployedRegion.Region -DirectoryId $DeployedRegion.DirectoryId -limit 25 -NoAutoIteration -select * -NextToken $null
+        $RegionalWks = $wksResponse.Workspaces
+        $token = $wksResponse.NextToken
+        while ($null -ne $token) {
+            $wksResponse = Get-WKSWorkSpaces -Region $DeployedRegion.Region -DirectoryId $DeployedRegion.DirectoryId -limit 25 -NoAutoIteration -select * -NextToken $token
+            $RegionalWks += $wksResponse.Workspaces
+            $token = $wksResponse.NextToken
+            if($throttleControl){
+                Start-Sleep -Milliseconds 200
+            }
+        }
         foreach ($Wks in $RegionalWks){
             $adErr = $false
-            $entry = New-Object -TypeName PSobject
-            $entry | Add-Member -NotePropertyName "WorkSpaceId" -NotePropertyValue $Wks.WorkspaceId
-            $entry | Add-Member -NotePropertyName "Region" -NotePropertyValue $DeployedRegion.Region
-            $entry | Add-Member -NotePropertyName "UserName" -NotePropertyValue $Wks.UserName 
-            $entry | Add-Member -NotePropertyName "ComputerName" -NotePropertyValue $Wks.ComputerName
-            $entry | Add-Member -NotePropertyName "Compute" -NotePropertyValue $Wks.WorkspaceProperties.ComputeTypeName | Out-String
-            $entry | Add-Member -NotePropertyName "RootVolume" -NotePropertyValue $Wks.WorkspaceProperties.RootVolumeSizeGib 
-            $entry | Add-Member -NotePropertyName "UserVolume" -NotePropertyValue $Wks.WorkspaceProperties.UserVolumeSizeGib
-            $entry | Add-Member -NotePropertyName "RunningMode" -NotePropertyValue $Wks.WorkspaceProperties.RunningMode
-            #Update for Protocol
-            if($Wks.WorkspaceProperties.Protocols -like "WSP"){$wsProto = 'WSP'}elseif ($Wks.WorkspaceProperties.Protocols -like "PCOIP"){$wsProto = 'PCoIP'} else{$wsProto = 'BYOP'}
-            $entry | Add-Member -NotePropertyName "Protocol" -NotePropertyValue $wsProto
-            $entry | Add-Member -NotePropertyName "IPAddress" -NotePropertyValue $Wks.IPAddress
-            $entry | Add-Member -NotePropertyName "RegCode" -NotePropertyValue ($DeployedRegion | Where-Object {$_.directoryId -eq $Wks.directoryId}).RegistrationCode
-            $entry | Add-Member -NotePropertyName "directoryId" -NotePropertyValue $Wks.directoryId
-            $entry | Add-Member -NotePropertyName "directoryName" -NotePropertyValue ($DeployedRegion | Where-Object {$_.directoryId -eq $Wks.directoryId}).DirectoryName
-            $entry | Add-Member -NotePropertyName "directoryAlias" -NotePropertyValue ($DeployedRegion | Where-Object {$_.directoryId -eq $Wks.directoryId}).DirectoryAlias
-            $entry | Add-Member -NotePropertyName "directoryType" -NotePropertyValue ($DeployedRegion | Where-Object {$_.directoryId -eq $Wks.directoryId}).DirectoryType
-            $entry | Add-Member -NotePropertyName "directoryState" -NotePropertyValue ($DeployedRegion | Where-Object {$_.directoryId -eq $Wks.directoryId}).DirectoryState
-            $entry | Add-Member -NotePropertyName "directoryUserEnabledAsLocalAdministrator" -NotePropertyValue ($DeployedRegion | Where-Object {$_.directoryId -eq $Wks.directoryId}).DirectoryUserEnabledAsLocalAdministrator
-            $entry | Add-Member -NotePropertyName "directoryTenancy" -NotePropertyValue ($DeployedRegion | Where-Object {$_.directoryId -eq $Wks.directoryId}).DirectoryTenancy
-            $entry | Add-Member -NotePropertyName "directoryAvailableIPs" -NotePropertyValue ($DeployedRegion | Where-Object {$_.directoryId -eq $Wks.directoryId}).DirectoryAvailableIPs
-            $entry | Add-Member -NotePropertyName "State" -NotePropertyValue $Wks.State
-            $entry | Add-Member -NotePropertyName "BundleId" -NotePropertyValue $Wks.BundleId
-            if((($RegionalBundles | Where-Object {$_.BundleId -like $Wks.BundleId}).Name) -eq ''){
-                $unavailablePubBundle = Get-WKSWorkspaceBundle -BundleId $Wks.BundleId -Region $DeployedRegion.Region
-                $entry | Add-Member -NotePropertyName "BundleName" -NotePropertyValue $unavailablePubBundle.Name
-            }else{
-                $entry | Add-Member -NotePropertyName "BundleName" -NotePropertyValue ($RegionalBundles | Where-Object {$_.BundleId -eq $Wks.BundleId}).Name
-            }
+            $wks | Add-Member -NotePropertyName "Region" -NotePropertyValue $DeployedRegion.Region
+            if($Wks.WorkspaceProperties.Protocols -like "WSP"){$wsProto = 'DCV'}elseif ($Wks.WorkspaceProperties.Protocols -like "PCOIP"){$wsProto = 'PCoIP'} else{$wsProto = 'BYOP'}
+            $wks | Add-Member -NotePropertyName "Protocol" -NotePropertyValue $wsProto
+            $wks | Add-Member -NotePropertyName "RegCode" -NotePropertyValue ($DeployedRegion | Where-Object {$_.directoryId -eq $Wks.directoryId}).RegistrationCode
             try{
                 $ADUser = Get-ADUser -Identity $Wks.UserName -Properties "EmailAddress"
             }catch{
                 $adErr = $true
             }
             if($adErr -eq $false){
-                $entry | Add-Member -NotePropertyName "FirstName" -NotePropertyValue ($ADUser.GivenName)
-                $entry | Add-Member -NotePropertyName "LastName" -NotePropertyValue ($ADUser.Surname)
-                $entry | Add-Member -NotePropertyName "Email" -NotePropertyValue ($ADUser.EmailAddress)
-                $WorkSpacesDDB += $entry
+                $wks | Add-Member -NotePropertyName "FirstName" -NotePropertyValue ($ADUser.GivenName)
+                $wks | Add-Member -NotePropertyName "LastName" -NotePropertyValue ($ADUser.Surname)
+                $wks | Add-Member -NotePropertyName "Email" -NotePropertyValue ($ADUser.EmailAddress)
             }else{
-                $entry | Add-Member -NotePropertyName "FirstName" -NotePropertyValue "AD Info Not Available"
-                $entry | Add-Member -NotePropertyName "LastName" -NotePropertyValue "AD Info Not Available"
-                $entry | Add-Member -NotePropertyName "Email" -NotePropertyValue "AD Info Not Available"
-                $WorkSpacesDDB += $entry
+                $wks | Add-Member -NotePropertyName "FirstName" -NotePropertyValue "AD Info Not Available"
+                $wks | Add-Member -NotePropertyName "LastName" -NotePropertyValue "AD Info Not Available"
+                $wks | Add-Member -NotePropertyName "Email" -NotePropertyValue "AD Info Not Available"
             }
+            $WorkSpacesDDB += $wks
         }
     }
     return $WorkSpacesDDB
 }
-
 
 function Get-WksServiceQuotasDB(){
     param(
         $DeployedRegions
     )
     $WSServiceQuota = @()
-    foreach($WksRegion in $DeployedRegions){
+    $UniqueRegions = $DeployedRegions | Select-Object Region -Unique
+    foreach($WksRegion in $UniqueRegions){
         $region = $WksRegion.Region
         $DeployedRegionsTemp = New-Object -TypeName PSobject
         $DeployedRegionsTemp | Add-Member -NotePropertyName "Region" -NotePropertyValue $region
@@ -110,6 +93,20 @@ function Get-WksServiceQuotasDB(){
             $TotalQuota = "N/A"
         }
         $DeployedRegionsTemp | Add-Member -NotePropertyName "quotaWks" -NotePropertyValue $TotalQuota
+        #Total Regional General Purpose 4XL WorkSpaces
+        try{
+            $Gp4xlQuota = (Get-SQServiceQuota -ServiceCode workspaces -QuotaCode "L-465DA8AF" -Region $region).Value
+        }catch{
+            $Gp4xlQuota = "N/A"
+        }
+        $DeployedRegionsTemp | Add-Member -NotePropertyName "quotaWks4xl" -NotePropertyValue $Gp4xlQuota
+        #Total Regional General Purpose 8XL WorkSpaces
+        try{
+            $Gp8xlQuota = (Get-SQServiceQuota -ServiceCode workspaces -QuotaCode "L-C266A5F4" -Region $region).Value
+        }catch{
+            $Gp8xlQuota = "N/A"
+        }
+        $DeployedRegionsTemp | Add-Member -NotePropertyName "quotaWks8xl" -NotePropertyValue $Gp8xlQuota
         # StandBy WorkSpaces
         try{
             $StandbyQuota = (Get-SQServiceQuota -ServiceCode workspaces -QuotaCode "L-9A67B5CB" -Region $region).Value
@@ -117,13 +114,6 @@ function Get-WksServiceQuotasDB(){
             $StandbyQuota = "N/A"
         }
         $DeployedRegionsTemp | Add-Member -NotePropertyName "quotaStandby" -NotePropertyValue $StandbyQuota
-        # Graphics WorkSpaces
-        try{
-            $GraphicsQuota = (Get-SQServiceQuota -ServiceCode workspaces -QuotaCode "L-84611756" -Region $region).Value
-        }catch{
-            $GraphicsQuota = "N/A"
-        }
-        $DeployedRegionsTemp | Add-Member -NotePropertyName "quotaGraphics" -NotePropertyValue $GraphicsQuota
         # GraphicsPro WorkSpaces
         try{
             $GraphicsProQuota = (Get-SQServiceQuota -ServiceCode workspaces -QuotaCode "L-254B485B" -Region $region).Value
@@ -152,45 +142,85 @@ function Get-WksServiceQuotasDB(){
 }
 
 function Get-WksDirectories(){
+    param(
+        $throttleControl
+    )
     $regions = @('us-east-1','us-west-2', 'ap-south-1', 'ap-northeast-2', 'ap-southeast-1', 'ap-southeast-2', 'ap-northeast-1', 'ca-central-1', 'eu-central-1','eu-west-1', 'eu-west-2', 'sa-east-1')
-    $DeployedRegions = @()
+    $DeployedDirectories = @()
+    $personalDirectory = New-Object -TypeName Amazon.WorkSpaces.Model.DescribeWorkspaceDirectoriesFilter
+    $personalDirectory.Name = "WORKSPACE_TYPE"
+    $personalDirectory.Values += "PERSONAL"
     # Find regions that have WorkSpaces deployments
     foreach($region in $regions){
-        $RegionsCall = Get-WKSWorkspaceDirectories -Region $region
-        if($RegionsCall){
-            foreach($WksRegion in $RegionsCall){
-                $DeployedRegionsTemp = New-Object -TypeName PSobject
-                $DeployedRegionsTemp | Add-Member -NotePropertyName "Region" -NotePropertyValue $region
-                $DeployedRegionsTemp | Add-Member -NotePropertyName "RegistrationCode" -NotePropertyValue $WksRegion.RegistrationCode
-                $DeployedRegionsTemp | Add-Member -NotePropertyName "DirectoryId" -NotePropertyValue $WksRegion.DirectoryId
-                $DeployedRegionsTemp | Add-Member -NotePropertyName "DirectoryName" -NotePropertyValue $WksRegion.DirectoryName
-                $DeployedRegionsTemp | Add-Member -NotePropertyName "DirectoryAlias" -NotePropertyValue $WksRegion.Alias
-                $DeployedRegionsTemp | Add-Member -NotePropertyName "DirectoryType" -NotePropertyValue $WksRegion.Type
-                $DeployedRegionsTemp | Add-Member -NotePropertyName "DirectoryState" -NotePropertyValue $WksRegion.State
-                $DeployedRegionsTemp | Add-Member -NotePropertyName "DirectoryUserEnabledAsLocalAdministrator" -NotePropertyValue $WksRegion.WorkspaceCreationProperties.UserEnabledAsLocalAdministrator
-                $DeployedRegionsTemp | Add-Member -NotePropertyName "DirectoryTenancy" -NotePropertyValue $WksRegion.Tenancy
-                $subnetA = Get-EC2Subnet -SubnetId $WksRegion.SubnetIds[0] -Region $region
-                $subnetB = Get-EC2Subnet -SubnetId $WksRegion.SubnetIds[1] -Region $region
-                $dirAvailableIPs = $subnetA.AvailableIpAddressCount + $subnetB.AvailableIpAddressCount
-                $DeployedRegionsTemp | Add-Member -NotePropertyName "DirectoryAvailableIPs" -NotePropertyValue $dirAvailableIPs
-                $DeployedRegions += $DeployedRegionsTemp
+        $directoryResponse = Get-WKSWorkspaceDirectories -Region $region -limit 25 -Filter $personalDirectory -NoAutoIteration -select * -NextToken $null
+        $RegionDirectories = $directoryResponse.Directories
+        $token = $directoryResponse.NextToken
+        while ($null -ne $token) {
+            $directoryResponse = Get-WKSWorkspaceDirectories -Region $region -limit 25 -Filter $personalDirectory -NoAutoIteration -select * -NextToken $token
+            $RegionDirectories += $directoryResponse.Directories
+            $token = $directoryResponse.NextToken
+            if($throttleControl){
+                Start-Sleep -Milliseconds 200
             }
         }
+        if($RegionDirectories){
+            foreach($WksDirectory in $RegionDirectories){
+                $WksDirectory | Add-Member -NotePropertyName "Region" -NotePropertyValue $region
+                $subnetA = Get-EC2Subnet -SubnetId $WksDirectory.SubnetIds[0] -Region $region
+                $subnetB = Get-EC2Subnet -SubnetId $WksDirectory.SubnetIds[1] -Region $region
+                $dirAvailableIPs = $subnetA.AvailableIpAddressCount + $subnetB.AvailableIpAddressCount
+                $WksDirectory | Add-Member -NotePropertyName "DirectoryAvailableIPs" -NotePropertyValue $dirAvailableIPs
+                $DeployedDirectories += $WksDirectory
+            }
+        }else{
+            Write-Host "Skipping $region"
+        }
     }
-
-    return $DeployedRegions
+    return $DeployedDirectories
 }
 
 function Get-AllBundles(){
     param(
-        $Region,
-        $Custom
+        $Regions,
+        $Custom,
+        $throttleControl
     )
-    if($custom -eq $true){
-        $Bundles = Get-WKSWorkspaceBundle -Region $Region
-        $Bundles += Get-WKSWorkspaceBundle -Region $Region -Owner 'AMAZON'
-    }else{
-        $Bundles = Get-WKSWorkspaceBundle -Region $Region -Owner 'AMAZON'
+    $Bundles = @()
+    foreach($Region in $Regions.Region){
+        if($custom -eq $true){
+            $bundleResponse = Get-WKSWorkspaceBundle -Region $Region -NoAutoIteration -select * -NextToken $null
+            $Bundles += $bundleResponse.Bundles
+            $token = $bundleResponse.NextToken
+            while ($null -ne $token) {
+                $bundleResponse = Get-WKSWorkspaceBundle -Region $Region -NoAutoIteration -select * -NextToken $token
+                $Bundles += $bundleResponse.Bundles
+                $token = $bundleResponse.NextToken
+                if($throttleControl){
+                    Start-Sleep -Milliseconds 200
+                }
+            }
+            $bundleResponse = Get-WKSWorkspaceBundle -Region $Region -Owner 'AMAZON' -NoAutoIteration -select * -NextToken $null
+            $Bundles += $bundleResponse.Bundles
+            $token = $bundleResponse.NextToken
+            while ($null -ne $token) {
+                $bundleResponse = Get-WKSWorkspaceBundle -Region $Region -Owner 'AMAZON' -NoAutoIteration -select * -NextToken $token
+                $Bundles += $bundleResponse.Bundles
+                $token = $bundleResponse.NextToken
+                if($throttleControl){
+                    Start-Sleep -Milliseconds 200
+                }
+            }
+        }else{
+            $bundleResponse = Get-WKSWorkspaceBundle -Region $Region -Owner 'AMAZON' -NoAutoIteration -select * -NextToken $null
+            $Bundles += $bundleResponse.Bundles
+            $token = $bundleResponse.NextToken
+            while ($null -ne $token) {
+                $bundleResponse = Get-WKSWorkspaceBundle -Region $Region -Owner 'AMAZON' -NoAutoIteration -select * -NextToken $token
+                $Bundles += $bundleResponse.Bundles
+                $token = $bundleResponse.NextToken
+                Start-Sleep -Milliseconds 200
+            }
+        }
     }
     return $Bundles
 }
@@ -249,11 +279,9 @@ function Invoke-RemoteAssist{
     param(
         [String]$privateIP
     )
-
     $parameters="/offerRA " +$privateIP
     $exe="msra.exe"
     start-process $exe $parameters -Wait
-    
 } 
 
 function Update-RootVolume{
@@ -280,30 +308,33 @@ function Update-RootVolume{
         $title = 'Root Volume Increase'
         $requestedSize = [Microsoft.VisualBasic.Interaction]::InputBox($msg, $title)
         $requestedSize = $requestedSize -as [int]
-    
-        if ($requestedSize -ge 175 -and $requestedSize -gt $CurrentRoot){
-            try{
-                $callBlock = "Edit-WKSWorkspaceProperty -WorkspaceId $WorkSpaceId -Region $region -WorkspaceProperties_RootVolumeSizeGib $requestedSize"
-                $scriptblock = [Scriptblock]::Create($callBlock)
-                $logging += Invoke-Command -scriptblock $scriptblock
-            }Catch{
-                $msg = $_
+        if ( -not ([string]::IsNullOrEmpty( $requestedSize ))){
+            if ($requestedSize -ge 175 -and $requestedSize -gt $CurrentRoot){
+                try{
+                    $callBlock = "Edit-WKSWorkspaceProperty -WorkspaceId $WorkSpaceId -Region $region -WorkspaceProperties_RootVolumeSizeGib $requestedSize"
+                    $scriptblock = [Scriptblock]::Create($callBlock)
+                    $logging += Invoke-Command -scriptblock $scriptblock
+                }Catch{
+                    $msg = $_
+                    $logging = New-Object -TypeName PSobject
+                    $logging | Add-Member -NotePropertyName "ErrorCode" -NotePropertyValue "Error During User Increase"
+                    $logging | Add-Member -NotePropertyName "ErrorMessage" -NotePropertyValue $msg
+                }
+                
+            }else{
+                $msg = "$WorkSpaceId was unable to extend its Root Volume to $requestedSize GB since its not greater than or equal to 175."
                 $logging = New-Object -TypeName PSobject
-                $logging | Add-Member -NotePropertyName "ErrorCode" -NotePropertyValue "Error During User Increase"
+                $logging | Add-Member -NotePropertyName "ErrorCode" -NotePropertyValue "Error During Root Increase"
                 $logging | Add-Member -NotePropertyName "ErrorMessage" -NotePropertyValue $msg
             }
-            
-        }else{
-            $msg = "$WorkSpaceId was unable to extend its Root Volume to $requested GB since its not greater than or equal to 175."
+        }
+    }else{
+        if ( -not ([string]::IsNullOrEmpty( $requestedSize ))){
+            $msg = "$WorkSpaceId was unable to extend its Root Volume to $requestedSize GB since your User Volume is not equal to 100GB."
             $logging = New-Object -TypeName PSobject
             $logging | Add-Member -NotePropertyName "ErrorCode" -NotePropertyValue "Error During Root Increase"
             $logging | Add-Member -NotePropertyName "ErrorMessage" -NotePropertyValue $msg
         }
-    }else{
-        $msg = "$WorkSpaceId was unable to extend its Root Volume to $requested GB since your User Volume is not equal to 100GB."
-        $logging = New-Object -TypeName PSobject
-        $logging | Add-Member -NotePropertyName "ErrorCode" -NotePropertyValue "Error During Root Increase"
-        $logging | Add-Member -NotePropertyName "ErrorMessage" -NotePropertyValue $msg
     }
     return $logging
 }  
@@ -670,7 +701,7 @@ function Get-CloudWatchStats(){
     $Startdate = (New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date)).TotalSeconds
     $Startdate = $Startdate - 604800
     $Enddate = Get-Date
-    $Enddate=$Enddate.ToUniversalTime()
+    $Enddate = $Enddate.ToUniversalTime()
     $Enddate = (New-TimeSpan -Start (Get-Date "01/01/1970") -End ($Enddate)).TotalSeconds
 
     #Initiate Query if Access Logs are configured
@@ -712,11 +743,10 @@ function Get-CloudWatchStats(){
             }
         }
         sleep -Seconds 1
-        $queryStatus =Get-CWLQuery -Status Complete -Region $AccessLogsRegion
+        $queryStatus = Get-CWLQuery -Status Complete -Region $AccessLogsRegion
     }
 
-    
-    $queryStatus =Get-CWLQuery -Status Complete -Region $AccessLogsRegion
+    $queryStatus = Get-CWLQuery -Status Complete -Region $AccessLogsRegion
     # Wait for the CloudTrail query to complete
     $queryString=('fields @message |filter `detail.eventName`="ModifyWorkspaceProperties" |filter `detail.requestParameters.workspaceId`="'+$WorkSpaceId+'"') 
     $queryResultWorkSpaceChanges=Start-CWLQuery -QueryString ('fields @message |filter `detail.eventName`="ModifyWorkspaceProperties"  |filter `detail.requestParameters.workspaceId`="'+$WorkSpaceId+'"') -LogGroupName $WorkSpaceAccessLogs -StartTime $Startdate -EndTime $Enddate -Region $AccessLogsRegion
@@ -751,3 +781,163 @@ function Get-CloudWatchStats(){
         $queryStatus =Get-CWLQuery -Status Complete -Region $AccessLogsRegion
     }
 }  
+
+###############################################
+# ! # ! # WorkSpaces Pools Helper # ! # ! # 
+###############################################
+
+function Get-WksPoolsDirectories(){
+    param(
+        $throttleControl
+    )
+    $regions = @('us-east-1','us-west-2', 'ap-south-1', 'ap-northeast-2', 'ap-southeast-1', 'ap-southeast-2', 'ap-northeast-1', 'ca-central-1', 'eu-central-1','eu-west-1', 'eu-west-2', 'sa-east-1')
+    $poolsDirectory = New-Object -TypeName Amazon.WorkSpaces.Model.DescribeWorkspaceDirectoriesFilter
+    $poolsDirectory.Name = "WORKSPACE_TYPE"
+    $poolsDirectory.Values += "POOLS"
+    $DeployedPoolsDirectories = @()
+    # Find regions that have WorkSpaces deployments
+    foreach($region in $regions){
+        $directoryResponse = Get-WKSWorkspaceDirectories -Region $region -limit 25 -Filter $poolsDirectory -NoAutoIteration -select * -NextToken $null
+        $RegionsCall = $directoryResponse.Directories
+        $token = $directoryResponse.NextToken
+        while ($null -ne $token) {
+            $directoryResponse = Get-WKSWorkspaceDirectories -Region $region -limit 25 -Filter $poolsDirectory -NoAutoIteration -select * -NextToken $token
+            $RegionsCall += $directoryResponse.Directories
+            $token = $directoryResponse.NextToken
+            if($throttleControl){
+                Start-Sleep -Milliseconds 200
+            }
+        }
+        if($RegionsCall){
+            foreach($PoolsRegion in $RegionsCall){
+                $DeployedDirectoriesTemp = New-Object -TypeName PSobject
+                $DeployedDirectoriesTemp | Add-Member -NotePropertyName "Region" -NotePropertyValue $region
+                $DeployedDirectoriesTemp | Add-Member -NotePropertyName "RegistrationCode" -NotePropertyValue $PoolsRegion.RegistrationCode
+                $DeployedDirectoriesTemp | Add-Member -NotePropertyName "DirectoryId" -NotePropertyValue $PoolsRegion.DirectoryId
+                $DeployedDirectoriesTemp | Add-Member -NotePropertyName "DirectoryName" -NotePropertyValue $PoolsRegion.DirectoryName
+                $DeployedDirectoriesTemp | Add-Member -NotePropertyName "DirectoryAlias" -NotePropertyValue $PoolsRegion.Alias
+                $DeployedDirectoriesTemp | Add-Member -NotePropertyName "DirectoryType" -NotePropertyValue $PoolsRegion.Type
+                $DeployedDirectoriesTemp | Add-Member -NotePropertyName "DirectoryState" -NotePropertyValue $PoolsRegion.State
+                $DeployedDirectoriesTemp | Add-Member -NotePropertyName "DirectoryUserEnabledAsLocalAdministrator" -NotePropertyValue $PoolsRegion.WorkspaceCreationProperties.UserEnabledAsLocalAdministrator
+                $subnetA = Get-EC2Subnet -SubnetId $PoolsRegion.SubnetIds[0] -Region $region
+                $subnetB = Get-EC2Subnet -SubnetId $PoolsRegion.SubnetIds[1] -Region $region
+                $dirAvailableIPs = $subnetA.AvailableIpAddressCount + $subnetB.AvailableIpAddressCount
+                $DeployedDirectoriesTemp | Add-Member -NotePropertyName "DirectoryAvailableIPs" -NotePropertyValue $dirAvailableIPs
+                $DeployedPoolsDirectories += $DeployedDirectoriesTemp
+            }
+        }else{
+            Write-Host "Skipping $region"
+        }
+    }
+    return $DeployedPoolsDirectories
+}
+
+function Get-WksPools(){
+    param(
+        $DeployedRegions,
+        $bundles,
+        $throttleControl
+    )
+
+    $poolsDB = @()
+    foreach($region in $DeployedRegions.Region){
+        $poolsResponse = Get-WKSWorkspacesPool -Region $region -limit 25 -NoAutoIteration -select * -NextToken $null
+        $pools = $poolsResponse.WorkspacesPools
+        $token = $poolsResponse.NextToken
+        while ($null -ne $token) {
+            $poolsResponse = Get-WKSWorkspacesPool -Region $region -limit 25 -NoAutoIteration -select * -NextToken $token
+            $pools += $poolsResponse.WorkspacesPools
+            $token = $poolsResponse.NextToken
+            if($throttleControl){
+                Start-Sleep -Milliseconds 200
+            }
+        }
+        $poolsDB += $pools
+    }
+    return $poolsDB
+}
+
+
+function Import-WksPoolsSessions(){
+    # Description
+    param(
+        [String]$poolId,
+        [String]$region,
+        $throttleControl
+    )
+
+    $poolsSessions = @()
+    $poolsResponse = Get-WKSWorkspacesPoolSession -PoolId $poolId -Region $region -limit 25 -NoAutoIteration -select * -NextToken $null
+    $poolsSessions = $poolsResponse.Sessions
+    $token = $poolsResponse.NextToken
+    while ($null -ne $token) {
+        $poolsResponse = Get-WKSWorkspacesPoolSession -PoolId $poolId -Region $region -limit 25 -NoAutoIteration -select * -NextToken $token
+        $poolsSessions += $poolsResponse.Sessions
+        $token = $poolsResponse.NextToken
+        if($throttleControl){
+            Start-Sleep -Milliseconds 200
+        }
+    }
+    return $poolsSessions
+}
+
+
+###############################################
+# ! # ! # AppStream Helper # ! # ! # 
+###############################################
+
+function Import-AppStreamRegions(){
+    param(
+        $throttleControl
+    )
+    #description
+    $responseStacks = @()
+    $regions = @('us-east-1', 'us-east-2', 'us-west-2', 'ap-south-1', 'ap-northeast-2', 'ap-southeast-1', 'ap-southeast-2', 'ap-northeast-1', 'ca-central-1', 'eu-central-1','eu-west-1', 'eu-west-2')
+    foreach ($region in $regions){
+        $tempStacks = $null
+        $tempStacks = Get-APSStackList -Region $region -NoAutoIteration -select * -NextToken $null
+        if(($tempStacks.Stacks).Count -ne 0){
+            $responseStacks += $tempStacks.Stacks
+            $token = $tempStacks.NextToken
+            while ($null -ne $token) {
+                $tempStacks = Get-APSStackList -Region $region -NoAutoIteration -select * -NextToken $token
+                $responseStacks += $tempStacks.Stacks
+                $token = $tempStacks.NextToken
+                if($throttleControl){
+                    Start-Sleep -Milliseconds 200
+                }
+            }
+        }else{
+            Write-Host "Skipping $region"
+        }
+    }
+    return $responseStacks
+}
+
+function Import-AppStreamSessions(){
+    # Description
+    param(
+        [String]$stackName,
+        [String]$fleetName,
+        [String]$region,
+        $capacityInfo,
+        $throttleControl
+    )
+
+    $sessionList = @()
+    # Get fleet and check capacity
+    $sessionResponse = Get-APSSessionList -StackName $stackName -FleetName $fleetName -Region $region -limit 50 -NoAutoIteration -select * -NextToken $null
+    if (($sessionResponse.Sessions).Count -ne 0){
+        $sessionList = $sessionResponse.Sessions
+        $token = $sessionResponse.NextToken
+        while ($null -ne $token) {
+            $sessionResponse += Get-APSSessionList -StackName $stackName -FleetName $fleetName -Region $region -limit 50 -NoAutoIteration -select * -NextToken $sessionResponse.NextToken
+            $sessionList += $sessionResponse.Sessions
+            $token = $sessionResponse.NextToken
+            if($throttleControl){
+                Start-Sleep -Milliseconds 200
+            }
+        }
+    }
+    return $sessionList
+}

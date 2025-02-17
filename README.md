@@ -8,9 +8,9 @@
 
 <a name="solution-overview"></a>
 # Solution Overview
-The EUC Toolkit was created to provide additional features for admins managing [Amazon WorkSpaces](https://docs.aws.amazon.com/workspaces/latest/adminguide/amazon-workspaces.html) and [Amazon AppStream 2.0](https://docs.aws.amazon.com/appstream2/latest/developerguide/what-is-appstream.html) environments. The current build offers the listed functionality below. For additional information, please see our [launch announcement](https://aws.amazon.com/blogs/desktop-and-application-streaming/euc-toolkit/).
+The EUC Toolkit was created to provide additional features for admins managing [Amazon WorkSpaces Personal](https://docs.aws.amazon.com/workspaces/latest/adminguide/amazon-workspaces.html), [Amazon WorkSpaces Pools](https://docs.aws.amazon.com/workspaces/latest/adminguide/managing-wsp-pools.html), and [Amazon AppStream 2.0](https://docs.aws.amazon.com/appstream2/latest/developerguide/what-is-appstream.html) environments. The current build offers the listed functionality below. For additional information, please see our [launch announcement](https://aws.amazon.com/blogs/desktop-and-application-streaming/euc-toolkit/).
 
-### Amazon WorkSpaces
+### Amazon WorkSpaces Personal
 - Search by any attribute
     - First name, last name, computer name, WorkSpace ID, bundle ID, running mode, email, username, Region, and/or directory ID
 - Bulk or single calls for start, stop, migrate, rebuild, restore, enable and disable admin maintenance (APIs optimized).
@@ -24,28 +24,68 @@ The EUC Toolkit was created to provide additional features for admins managing [
     - Remote backup
     - Remote server-side log gathering
 
-### Amazon AppStream 2.0
+### Amazon WorkSpaces Pools
 - Query and display active sessions
 - Filter active sessions by:
     - Stack, connected state, userId, session state, IP address, and/or Region
 - View in-use IP of active sessions
 - Terminate active sessions
-- Export AppStream 2.0 report (CSV)
+- Export report (CSV)
+- Active session and host inventory visibility
+- Optional functionality:
+    - Windows Remote Assistance
+
+### Amazon AppStream
+- Query and display active sessions
+- Filter active sessions by:
+    - Stack, connected state, userId, session state, IP address, and/or Region
+- View in-use IP of active sessions
+- Terminate active sessions
+- Export report (CSV)
+- Active session and fleet inventory visibility
 - Optional functionality:
     - Windows Remote Assistance
 
 ### Overall Toolkit
 - API logging
 - Source permissions identifier (supports instance profiles) 
+- Regional service quotas visibility
 
 
 <a name="getting-started"></a>
 # Getting Started
 For information on getting the solution setup, along with the steps for optional features, see our [launch announcement](https://aws.amazon.com/blogs/desktop-and-application-streaming/euc-toolkit/).
 
+# Installing AWS Tools
+The EUC Toolkit relies on [AWS Tools for PowerShell version 4](https://docs.aws.amazon.com/powershell/latest/userguide/v4migration.html#migrate-select) to use the `-Select` attribute. To install the required modules, you can utilize the following command:
+
+`Install-AWSToolsModule AWS.Tools.Common,AWS.Tools.EC2,AWS.Tools.Workspaces,AWS.Tools.Appstream,AWS.Tools.Cloudwatch,AWS.Tools.CloudwatchLogs,AWS.Tools.ServiceQuotas -CleanUp
+`
+
+To upgrade your installed AWS Tools for PowerShell modules, you can utilize the following command:
+
+`
+Update-AWSToolsModule -CleanUp -Force
+`
 
 <a name="aws-solutions-constructs"></a><a name="customizing-the-solution"></a>
 # Customizing the Solution
+## Updating supported Regions
+By default, the EUC Toolkit will call all commercial regions to build its local database. It is recommended that you update the toolkit to call only the regions you are deployed in. The regional calls are in three functions within `EUCToolkit-helper.psm1`:
+- `Get-WksDirectories`
+- `Get-WksPoolsDirectories`
+- `Import-AppStreamRegions`
+
+### Example
+**Default Get-WksDirectories Regions call**
+
+`$regions = @('us-east-1','us-west-2', 'ap-south-1', 'ap-northeast-2', 'ap-southeast-1', 'ap-southeast-2', 'ap-northeast-1', 'ca-central-1', 'eu-central-1','eu-west-1', 'eu-west-2', 'sa-east-1')`
+
+**Updated Get-WksDirectories to call only us-east-1 and us-west-2**
+
+`$regions = @('us-east-1','us-west-2')`
+
+## Customizing Functionality
 The solution can be completely customized to meet business needs. The EUC toolkit is built on PowerShell using the Windows Presentation Framework ([WPF](https://learn.microsoft.com/en-us/visualstudio/designers/getting-started-with-wpf?view=vs-2022)) to display a graphical user interface (GUI) on Windows machines. In addition, the solution has been modularized to to allow for changes and customizations. As is, the toolkit is licensed as MIT-0, meaning it is an 'as-is' example. Any changes made to the project are owned by the modifier. 
 
 **Customizing the PowerShell GUI**
@@ -60,13 +100,13 @@ The GUI for the application is built using XML. To add additional buttons, label
 
 The Powershell script is divided into 2 files, both can be customized to add additional functionality or used as a reference for other automation.
 
-**EUCToolkit-Main.ps1**
+**Start-EUCToolkit.ps1**
 
-Contains all of the code that interacts with the GUI. The functions in this script will call actions in the EUCToolkit-Helper.psm1 to perform calls against WorkSpaces and on AppStream 2.0.
+Contains all of the code that interacts with the GUI. The functions in this script will call actions in the EUCToolkit-Helper.psm1 to perform calls against WorkSpaces and on AppStream.
 
 **EUCToolkit-Helper.psm1**
 
-Contains all of the functions that interact with WorkSpaces and AppStream 2.0.
+Contains all of the functions that interact with WorkSpaces and AppStream.
 
 **Settings.csv**
 
@@ -82,64 +122,29 @@ You must have IAM permissions to call the service APIs. It is a best practice to
 
 <a name="Required-permissions"></a>
 # Required permissions
-
-```
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Sid": "EUCToolkitWorkSpaceAccess",
-      "Action": [
-        "workspaces:DescribeWorkspaceBundles",
-        "workspaces:DescribeWorkspaceDirectories",
-        "workspaces:DescribeWorkspaceSnapshots",
-        "workspaces:DescribeWorkspaces",
-        "workspaces:MigrateWorkspace",
-        "workspaces:ModifyWorkspaceProperties",
-        "workspaces:ModifyWorkspaceState",
-        "workspaces:RebootWorkspaces",
-        "workspaces:RebuildWorkspaces",
-        "workspaces:RestoreWorkspace",
-        "workspaces:StartWorkspaces",
-        "workspaces:StopWorkspaces",
-        "workspaces:TerminateWorkspaces"
-      ],
-      "Effect": "Allow",
-      "Resource": "*"
-    },
-    {
-      "Sid": "EUCToolkitAppStream2Access",
-      "Action": [
-        "appstream:DescribeSessions",
-        "appstream:DescribeStacks",
-        "appstream:ExpireSession",
-        "appstream:ListAssociatedFleets"
-      ],
-      "Effect": "Allow",
-      "Resource": "*"
-    },
-    {
-      "Sid": "WorkSpacesCloudWatchImages",
-      "Action": [
-        "cloudwatch:GetMetricWidgetImage"
-      ],
-      "Effect": "Allow",
-      "Resource": "*"
-    },
-    {
-      "Sid": "WorkSpacesCloudWatchMetrics",
-      "Action": [
-        "logs:DescribeQueries",
-	"logs:DescribeLogGroups",
-        "logs:GetQueryResults",
-        "logs:StartQuery"
-      ],
-      "Effect": "Allow",
-      "Resource": "*"
-    }
-  ]
-}
-```
+- Get-WKSWorkspaceBundle
+- Get-WKSWorkspace
+- Get-WKSWorkspaceDirectories
+- Get-SQServiceQuota
+- Get-WKSWorkspaceSnapshot
+- Start-WKSWorkspaceMigration
+- Edit-WKSWorkspaceProperty
+- Edit-WKSWorkspaceState
+- Restart-WKSWorkspace
+- Restore-WKSWorkspace
+- Reset-WKSWorkspace
+- Start-WKSWorkspace
+- Stop-WKSWorkspace 
+- Remove-WKSWorkspace
+- Get-WKSWorkspacesPool 
+- Get-WKSWorkspacesPoolSession
+- Remove-WKSWorkspacesPoolSession
+- Get-APSFleetList
+- Get-APSStackList
+- Revoke-APSSession
+- Start-CWLQuery
+- Get-CWLQueryResult
+- Get-CWMetricWidgetImage
 
 <a name="file-structure"></a>
 # File structure
@@ -163,7 +168,7 @@ You must have IAM permissions to call the service APIs. It is a best practice to
     |-WorkSpacesSessionLaunchTemplate.JSON
   |-EUCToolkit-Helper.psm1
   |-EUCToolkit-MainGUI.xml
-|-EUCToolkit-Main.ps1
+|-Start-EUCToolkit.ps1
 |-CONTRIBUTING.md
 |-LICENSE.txt
 |-NOTICE.txt
